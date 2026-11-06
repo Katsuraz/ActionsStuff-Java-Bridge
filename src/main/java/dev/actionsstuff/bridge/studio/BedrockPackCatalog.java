@@ -177,7 +177,8 @@ public final class BedrockPackCatalog {
                     if (!e.getValue().isJsonObject()) continue;
                     JsonObject states = object(e.getValue().getAsJsonObject(), "states");
                     controllers.putIfAbsent(e.getKey(), new Controller(e.getKey(),
-                        states == null ? List.of() : List.copyOf(states.keySet())));
+                        states == null ? List.of() : List.copyOf(states.keySet()),
+                        e.getValue().getAsJsonObject().deepCopy()));
                 }
             }
             default -> { }
@@ -228,7 +229,7 @@ public final class BedrockPackCatalog {
     }
 
     public record EntityInfo(String id, Map<String, String> geometry, Map<String, String> animations) { }
-    public record Controller(String id, List<String> states) { }
+    public record Controller(String id, List<String> states, JsonObject originalSource) { }
     public record AnimationOption(String alias, Animation animation) { }
     public record Bone(String name, String parent, float x, float y, float z, int cubes) { }
     public record Geometry(String id, List<Bone> bones, int cubes, JsonObject originalSource) {
