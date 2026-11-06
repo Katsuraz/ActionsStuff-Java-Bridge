@@ -199,7 +199,8 @@ public final class BedrockPackCatalog {
             Geometry geo = geometry.get(id);
             if (geo != null && !list.contains(geo)) list.add(geo);
         }
-        list.sort(Comparator.comparing(Geometry::id));
+        // Prefer humanoid geometry with recognizable limbs over attached props.
+        list.sort(Comparator.comparingInt((Geometry g) -> -humanoidScore(g)).thenComparing(Geometry::id));
         return list;
     }
 
