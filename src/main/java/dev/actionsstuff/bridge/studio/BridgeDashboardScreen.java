@@ -52,9 +52,10 @@ public final class BridgeDashboardScreen extends Screen {
             if (client != null) client.setScreen(new BedrockStudioScreen(this));
         }).dimensions(x, y + 28, buttonWidth, 20).build());
 
+        int advancedY = Math.min(229, Math.max(y + 56, height - 64));
         addDrawableChild(ButtonWidget.builder(Text.literal("Advanced Tests / Debugging"), b -> {
             if (client != null) client.setScreen(new BridgeAdvancedScreen(this));
-        }).dimensions(x, 229, buttonWidth, 20).build());
+        }).dimensions(x, advancedY, buttonWidth, 20).build());
     }
 
     private void importPack() {
@@ -115,7 +116,7 @@ public final class BridgeDashboardScreen extends Screen {
         line(ctx, "the complete Bedrock pack in Minecraft Java.", left + 12, 207, TEXT);
 
         line(ctx, compact(feedback, right - left - 10),
-             left, Math.max(265, height - 38), MUTED);
+             left, height - 29, MUTED);
 
         super.render(ctx, mouseX, mouseY, delta);
     }
