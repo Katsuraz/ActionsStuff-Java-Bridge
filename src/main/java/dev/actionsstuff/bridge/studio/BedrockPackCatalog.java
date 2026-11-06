@@ -204,6 +204,17 @@ public final class BedrockPackCatalog {
         return list;
     }
 
+    private static int humanoidScore(Geometry geo) {
+        int score = 0;
+        for (Bone bone : geo.bones()) {
+            String n = bone.name().toLowerCase(Locale.ROOT).replace("_", "");
+            if (n.equals("root") || n.equals("body") || n.equals("waist") || n.equals("head")) score += 12;
+            if (n.equals("leftarm") || n.equals("rightarm")
+                    || n.equals("leftleg") || n.equals("rightleg")) score += 18;
+        }
+        return score + Math.min(geo.cubes(), 100) / 10;
+    }
+
     public List<AnimationOption> animationsFor(String entityId) {
         EntityInfo info = entities.get(entityId);
         if (info == null) return List.of();
