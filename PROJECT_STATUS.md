@@ -1,6 +1,6 @@
 # Actions & Stuff Java Bridge — development status
 
-**Active development target: Minecraft Java Fabric 1.21.11.**
+**Active development target: Minecraft Java Fabric 1.21.11.**\n\nCurrent private test: 19 original-source player clips converted from the user's licensed 1.13 source, loaded through a separate resourcepack. No copyrighted assets are committed. Runtime now uses per-entity animation clocks, smoothing and directional clip selection. Original custom geometry and full Bedrock controllers remain unsupported.
 
 ## Current alpha test
 - Java **21**, Fabric Loader **0.18.4**, Fabric API **0.141.1+1.21.11**.
