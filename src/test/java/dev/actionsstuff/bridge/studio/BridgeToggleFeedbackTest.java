@@ -32,7 +32,7 @@ class BridgeToggleFeedbackTest {
     }
 
     @Test void modMenuHas3dEnablePathAndShowsWhyControllersAreBlocked() throws Exception {
-        String dashboard = read("BridgeDashboardScreen");
+        String dashboard = read("BridgeAdvancedScreen");
         assertTrue(dashboard.contains("OriginalRigRuntime.enable(pack, selected)"));
         assertTrue(dashboard.contains("OriginalRigRuntime.controllerBlockReason()"));
         assertTrue(dashboard.contains("3D overlay: BLOCKED"));
