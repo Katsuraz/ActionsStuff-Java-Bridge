@@ -1,3 +1,7 @@
+## New Studio UI & Mod Menu (v0.6.0-alpha.1)
+
+Install **Mod Menu 17.0.1** (optional) to open the bridge controls from **Mods → Configure**. Press **B** to open the redesigned Studio with a Settings shortcut. The older six-part animation adapter now starts **OFF** by default, and the original 3D overlay remains separately optional. The dashboard can report other potentially conflicting animation mods. See [UI_AND_MODMENU.md](docs/UI_AND_MODMENU.md) for testing and isolation steps.
+
 # Bedrock Pack Bridge Studio — Fabric 1.21.11 experimental alpha
 
 This branch adds a **local-only Bedrock pack inspector and player-motion preview** to the existing Fabric bridge. The user may privately test the Actions & Stuff 1.13 pack they supplied. It is NOT a complete Bedrock resource-pack compatibility layer, 3D Bedrock renderer, or full Java port.
