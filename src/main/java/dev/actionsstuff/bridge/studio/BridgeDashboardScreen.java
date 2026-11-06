@@ -1,6 +1,7 @@
 package dev.actionsstuff.bridge.studio;
 
 import net.minecraft.client.MinecraftClient;
+import dev.actionsstuff.bridge.SourcePlayerMotion;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -27,6 +28,7 @@ public final class BridgeDashboardScreen extends Screen {
     private final Screen previous;
     private boolean scanning;
     private ButtonWidget importButton;
+    private ButtonWidget playerMotionButton;
     private String feedback = "Your original Bedrock pack stays private on this computer.";
 
     public BridgeDashboardScreen(Screen previous) {
@@ -48,14 +50,37 @@ public final class BridgeDashboardScreen extends Screen {
         importButton = addDrawableChild(ButtonWidget.builder(Text.literal("1. Import my .mcpack"), b -> importPack())
             .dimensions(x, y, buttonWidth, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("2. Open Animation Studio"), b -> {
-            if (client != null) client.setScreen(new BedrockStudioScreen(this));
-        }).dimensions(x, y + 28, buttonWidth, 20).build());
+        playerMotionButton = addDrawableChild(ButtonWidget.builder(motionLabel(), b -> toggleMotion())
+            .dimensions(x, y + 29, buttonWidth, 20).build());
 
-        int advancedY = Math.min(229, Math.max(y + 56, height - 64));
+        addDrawableChild(ButtonWidget.builder(Text.literal("3. Explore Animations (optional)"), b -> {
+            if (client != null) client.setScreen(new BedrockStudioScreen(this));
+        }).dimensions(x, y + 58, buttonWidth, 20).build());
+
+        int advancedY = Math.max(y + 88, Math.min(252, height - 61));
         addDrawableChild(ButtonWidget.builder(Text.literal("Advanced Tests / Debugging"), b -> {
             if (client != null) client.setScreen(new BridgeAdvancedScreen(this));
         }).dimensions(x, advancedY, buttonWidth, 20).build());
+    }
+
+    private static Text motionLabel() {
+        return Text.literal(SourcePlayerMotion.enabled() ? "2. Turn OFF Player Motion"
+            : "2. Enable Player Motion");
+    }
+
+    private void toggleMotion() {
+        if (SourcePlayerMotion.enabled()) {
+            SourcePlayerMotion.disable();
+            feedback = "Source-driven player motion stopped. Normal vanilla animation restored.";
+        } else {
+            BedrockPackCatalog pack = BedrockStudioScreen.latestImportedPack();
+            if (pack == null) {
+                feedback = "First click Import my .mcpack, then enable player motion.";
+            } else {
+                feedback = SourcePlayerMotion.enable(pack);
+            }
+        }
+        if (playerMotionButton != null) playerMotionButton.setMessage(motionLabel());
     }
 
     private void importPack() {
@@ -84,7 +109,11 @@ public final class BridgeDashboardScreen extends Screen {
             minecraft.execute(() -> {
                 scanning = false;
                 if (importButton != null) importButton.active = true;
-                if (imported != null) BedrockStudioScreen.rememberImportedPack(imported);
+                if (imported != null) {
+                    SourcePlayerMotion.disable();
+                    BedrockStudioScreen.rememberImportedPack(imported);
+                }
+                if (playerMotionButton != null) playerMotionButton.setMessage(motionLabel());
                 feedback = status;
             });
         }, "ActionsStuff-PackImporter");
@@ -94,6 +123,7 @@ public final class BridgeDashboardScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        if (playerMotionButton != null) playerMotionButton.setMessage(motionLabel());
         ctx.fill(0, 0, width, height, BG);
         int left = Math.max(10, (width - Math.min(width - 20, 600)) / 2);
         int right = width - left;
@@ -109,11 +139,20 @@ public final class BridgeDashboardScreen extends Screen {
             compact("My pack: IMPORTED - " + imported.filename, right - left - 24),
             left + 12, 73, imported == null ? WARNING : ACCENT);
 
-        line(ctx, "IN-GAME STATUS", left + 12, 158, ACCENT);
-        line(ctx, "Full Actions & Stuff port: NOT READY", left + 12, 177, WARNING);
-        line(ctx, compact("Importing lets you inspect animations; it does not enable",
-                    right - left - 24), left + 12, 194, TEXT);
-        line(ctx, "the complete Bedrock pack in Minecraft Java.", left + 12, 207, TEXT);
+        line(ctx, "IN-GAME PLAYER MOTION", left + 12, 183, ACCENT);
+        line(ctx, SourcePlayerMotion.enabled()
+                ? "SOURCE PLAYER MOTION: ON (" + SourcePlayerMotion.playableClipCount() + " clips)"
+                : "SOURCE PLAYER MOTION: OFF",
+            left + 12, 200, SourcePlayerMotion.enabled() ? ACCENT : MUTED);
+        line(ctx, "Full pack (textures / mobs / accessories): NOT READY",
+            left + 12, 215, WARNING);
+        if (SourcePlayerMotion.enabled()) {
+            line(ctx, compact("Now playing: " + SourcePlayerMotion.recentPhase(),
+                right - left - 24), left + 12, 229, MUTED);
+        } else {
+            line(ctx, "Legacy test poses remain under Advanced (not recommended).",
+                left + 12, 229, MUTED);
+        }
 
         line(ctx, compact(feedback, right - left - 10),
              left, height - 29, MUTED);
