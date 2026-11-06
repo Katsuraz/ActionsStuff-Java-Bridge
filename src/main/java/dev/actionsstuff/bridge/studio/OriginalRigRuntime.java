@@ -33,7 +33,15 @@ public final class OriginalRigRuntime {
         // Never overwrite the working renderer until the source rig is valid.
         if (catalog == null) return "No local pack imported";
         if (geometry == null) geometry = BedrockCubeModel.choosePlayerGeometry(catalog);
-        if (geometry == null) return "No safe player geometry with source cubes found";
+        if (geometry == null) {
+            active = null;
+            return "Source player uses built-in Bedrock body or conditional accessory layers; no safe standalone 3D mesh";
+        }
+        BedrockModelSafety.Assessment eligibility = BedrockModelSafety.assess(catalog, geometry);
+        if (!eligibility.worldSafe()) {
+            active = null;
+            return eligibility.reason();
+        }
         try {
             BedrockCubeModel model = BedrockCubeModel.build(geometry);
             Map<String,BedrockPackCatalog.Animation> clips = new HashMap<>();
