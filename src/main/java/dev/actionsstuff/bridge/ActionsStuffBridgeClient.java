@@ -1,6 +1,6 @@
 package dev.actionsstuff.bridge;
 
-import dev.actionsstuff.bridge.studio.BedrockStudioScreen;
+import dev.actionsstuff.bridge.studio.BridgeDashboardScreen;
 import dev.actionsstuff.bridge.studio.BedrockPlayerFeature;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -33,7 +33,7 @@ public final class ActionsStuffBridgeClient implements ClientModInitializer {
         });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (studio.wasPressed()) {
-                client.setScreen(new BedrockStudioScreen(client.currentScreen));
+                client.setScreen(new BridgeDashboardScreen(client.currentScreen));
             }
         });
         BridgeAnimations.LOG.info("Actions & Stuff Java Bridge and Bedrock Studio initialized");
