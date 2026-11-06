@@ -31,6 +31,9 @@ public final class BedrockStudioScreen extends Screen {
     private static final int WARNING = 0xFFE6B96D;
     private final Screen back;
     private BedrockPackCatalog catalog;
+    private static volatile BedrockPackCatalog latestImportedPack;
+    private ButtonWidget source3dButton;
+    private ButtonWidget controllersButton;
     private List<Path> paths = List.of();
     private List<String> entityNames = List.of();
     private List<BedrockPackCatalog.Geometry> geoList = List.of();
@@ -50,6 +53,29 @@ public final class BedrockStudioScreen extends Screen {
 
     public static Path packDirectory() {
         return FabricLoader.getInstance().getConfigDir().resolve("bedrockbridge").resolve("packs");
+    }
+
+    /** Dashboard may be opened directly through Mod Menu, without re-reading assets. */
+    public static BedrockPackCatalog latestImportedPack() { return latestImportedPack; }
+    public BedrockPackCatalog currentPack() { return catalog; }
+    public BedrockPackCatalog.Geometry currentGeometry() { return selectedGeometry(); }
+
+    private String source3dLabel() {
+        if (OriginalRigRuntime.enabled()) return "3D: ON";
+        if (catalog == null) return "3D: NEED PACK";
+        var geo = selectedGeometry();
+        if (geo == null) return "3D: NO MODEL";
+        return BedrockModelSafety.assess(catalog, geo).worldSafe() ? "3D: OFF" : "3D: BLOCKED";
+    }
+
+    private String controllerLabel() {
+        if (OriginalRigRuntime.controllersEnabled()) return "Controllers: ON";
+        return OriginalRigRuntime.controllersAvailable() ? "Controllers: OFF" : "Controllers: NEED 3D";
+    }
+
+    private void refreshToggleLabels() {
+        if (source3dButton != null) source3dButton.setMessage(Text.literal(source3dLabel()));
+        if (controllersButton != null) controllersButton.setMessage(Text.literal(controllerLabel()));
     }
 
     @Override
@@ -83,19 +109,28 @@ public final class BedrockStudioScreen extends Screen {
 
         int third = Math.max(60, (full - gap * 2) / 3);
         addButton("Legacy player poses (toggle)", left, 101, third, h, this::toggleLegacy);
-        addButton("3D source overlay (toggle)", left + third + gap, 101, third, h, this::toggle3d);
-        addButton("Controller layers (toggle)", left + (third + gap) * 2, 101, third, h,
-            () -> {
-                boolean enabled = OriginalRigRuntime.toggleControllers();
-                status = "Partial Bedrock controller layers " + (enabled ? "enabled" : "disabled");
-            });
+        source3dButton = addButton("3D: OFF", left + third + gap, 101, third, h, this::toggle3d);
+        controllersButton = addButton("Controllers: NEED 3D", left + (third + gap) * 2, 101, third, h,
+            this::toggleControllers);
+        refreshToggleLabels();
 
         if (catalog == null && !loading) scan();
     }
 
-    private void addButton(String label, int x, int y, int w, int h, Runnable action) {
-        addDrawableChild(ButtonWidget.builder(Text.literal(label), b -> action.run())
+    private ButtonWidget addButton(String label, int x, int y, int w, int h, Runnable action) {
+        return addDrawableChild(ButtonWidget.builder(Text.literal(label), b -> action.run())
             .dimensions(x, y, w, h).build());
+    }
+
+    private void toggleControllers() {
+        if (!OriginalRigRuntime.controllersAvailable()) {
+            status = OriginalRigRuntime.controllerBlockReason();
+            refreshToggleLabels();
+            return;
+        }
+        boolean enabled = OriginalRigRuntime.toggleControllers();
+        status = "Partial source controller playback " + (enabled ? "ON" : "OFF");
+        refreshToggleLabels();
     }
 
     private void toggleLegacy() {
@@ -150,6 +185,7 @@ public final class BedrockStudioScreen extends Screen {
         paths = List.copyOf(found);
         fileIndex = ix;
         catalog = imported;
+        latestImportedPack = imported;
         entityNames = catalog.entityNames();
         entityIndex = geometryIndex = clipIndex = boneIndex = 0;
         seconds = 0;
@@ -164,6 +200,7 @@ public final class BedrockStudioScreen extends Screen {
         clipList = catalog.animationsFor(id);
         geometryIndex = boneIndex = clipIndex = 0;
         seconds = 0;
+        refreshToggleLabels();
         for (int i = 0; i < clipList.size(); i++) {
             if (clipList.get(i).alias().equals("walk")) {
                 clipIndex = i;
@@ -181,6 +218,7 @@ public final class BedrockStudioScreen extends Screen {
         if (geoList.isEmpty()) return;
         geometryIndex = Math.floorMod(geometryIndex + step, geoList.size());
         boneIndex = 0;
+        refreshToggleLabels();
     }
     private void clip(int step) {
         if (clipList.isEmpty()) return;
@@ -202,6 +240,7 @@ public final class BedrockStudioScreen extends Screen {
         OriginalRigRuntime.disable();
         int loaded = BridgeAnimations.loadBedrockPlayer(catalog);
         useInGame = loaded > 0;
+        refreshToggleLabels();
         status = useInGame ? "Loaded " + loaded + " source-derived clips into player renderer"
             : "No usable numeric player clips found; expressions may require MoLang";
     }
@@ -209,20 +248,25 @@ public final class BedrockStudioScreen extends Screen {
     private void toggle3d() {
         if (OriginalRigRuntime.enabled()) {
             OriginalRigRuntime.disable();
-            status = "Original 3D layer disabled; vanilla renderer preserved";
+            status = "Source 3D overlay OFF; vanilla character is still rendered";
+            refreshToggleLabels();
             return;
         }
         if (catalog == null) {
-            status = "Import your private .mcpack first";
+            status = "Import your private .mcpack first; Studio cannot activate an unloaded model";
+            refreshToggleLabels();
             return;
         }
         BedrockPackCatalog.Geometry selected = selectedGeometry();
-        BridgeAnimations.disable();
-        useInGame = false;
+        // Do not switch the user out of the legacy adapter unless the 3D model
+        // has ACTUALLY passed all safety/geometry checks.
         status = OriginalRigRuntime.enable(catalog, selected);
         if (OriginalRigRuntime.enabled()) {
-            status += " | only source cube mesh; some UV faces/materials unsupported";
+            BridgeAnimations.disable();
+            useInGame = false;
+            status += " | experimental geometry; texture/controller fidelity incomplete";
         }
+        refreshToggleLabels();
     }
 
     private BedrockPackCatalog.AnimationOption clipOption() {
@@ -259,7 +303,18 @@ public final class BedrockStudioScreen extends Screen {
         ctx.fill(detailsX, top, Math.max(detailsX + 190, rightX - 6), bottom, PANEL);
         ctx.fill(rightX, top, width - 14, bottom, PANEL);
         line(ctx, "BEDROCK PACK BRIDGE / STUDIO", 14, 8, ACCENT);
+        refreshToggleLabels();
         line(ctx, compact(status, width - 35), 14, height - 25, loading ? WARNING : MUTED);
+        if (catalog != null && !OriginalRigRuntime.enabled()) {
+            var selected = selectedGeometry();
+            if (selected != null) {
+                var safety = BedrockModelSafety.assess(catalog, selected);
+                if (!safety.worldSafe()) {
+                    line(ctx, compact("3D BLOCKED: " + safety.reason(), width - 35),
+                        14, height - 39, WARNING);
+                }
+            }
+        }
         if (catalog == null) {
             line(ctx, "No pack imported. Copy a .mcpack into:", 28, top + 20, TEXT);
             line(ctx, compact(packDirectory().toString(), column - 20), 28, top + 36, WARNING);
