@@ -268,13 +268,16 @@ public final class BedrockStudioScreen extends Screen {
         if (geo != null) {
             line(ctx, compact(geo.id(), column - 28), left + 8, top + 54, MUTED);
             line(ctx, "Bones " + geo.bones().size() + " | Cubes " + geo.cubes(), left + 8, top + 68, MUTED);
-            int limit = Math.max(3, Math.min(27, (bottom - top - 90) / 11));
+            var assessment = BedrockModelSafety.assess(catalog, geo);
+            line(ctx, compact("Role: " + assessment.kind(), column - 30),
+                left + 8, top + 83, assessment.worldSafe() ? ACCENT : WARNING);
+            int limit = Math.max(3, Math.min(24, (bottom - top - 102) / 11));
             List<BedrockPackCatalog.Bone> bones = geo.bones();
             for (int i = 0; i < Math.min(limit, bones.size()); i++) {
                 int at = (Math.floorMod(boneIndex, Math.max(1, bones.size())) + i) % bones.size();
                 var bone = bones.get(at);
                 String label = (i == 0 ? "» " : "  ") + bone.name();
-                line(ctx, compact(label, column - 30), left + 10, top + 84 + 11 * i, i == 0 ? ACCENT : TEXT);
+                line(ctx, compact(label, column - 30), left + 10, top + 98 + 11 * i, i == 0 ? ACCENT : TEXT);
             }
         } else {
             line(ctx, "No matching geometry.", left + 8, top + 58, WARNING);
