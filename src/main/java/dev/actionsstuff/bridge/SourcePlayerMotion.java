@@ -107,52 +107,93 @@ public final class SourcePlayerMotion {
         Playback playback = players.computeIfAbsent(render.id, ignored -> new Playback());
         if (players.size() > 8) players.clear();
         float age = render.age;
-        if (!phase.equals(playback.phase) || age < playback.lastAge - 5) {
+        boolean reset = Float.isFinite(playback.lastAge) && age < playback.lastAge - 5f;
+        if (reset) playback.reset();
+        float deltaTicks = Float.isFinite(playback.lastAge)
+            ? clamp(age - playback.lastAge, 0f, 3f) : 0f;
+
+        // Bedrock animation source has a single 1-second stride, but Steve can
+        // walk or sprint at different speeds. Keep the clock continuous when
+        // switching walk <-> move so neither leg snaps back to frame zero.
+        boolean locomotion = isLocomotion(phase);
+        float speed = (float)self.getVelocity().horizontalLength();
+        float targetRate = clamp(speed / (self.isSprinting() ? 0.18f : 0.11f),0.7f,1.7f);
+        if (!Float.isFinite(playback.strideRate)) playback.strideRate = 1f;
+        playback.strideRate = lerp(playback.strideRate,targetRate,clamp(deltaTicks * 0.14f,0,0.4f));
+
+        if (!phase.equals(playback.phase)) {
+            playback.previousPhase = playback.phase;
+            playback.previousSeconds = playback.lastSampleSeconds;
             playback.phase = phase;
             playback.startedAt = age;
             playback.changedAt = age;
+            if (locomotion && !isLocomotion(playback.previousPhase)) {
+                playback.strideSeconds = 0f;
+            }
+        }
+        if (locomotion) playback.strideSeconds += deltaTicks / 20f * playback.strideRate;
+        else if (playback.previousPhase != null && !locomotion && !isLocomotion(playback.previousPhase)) {
+            playback.strideSeconds = 0f;
         }
         playback.lastAge = age;
         recentPhase = phase;
 
-        float localSeconds = Math.max(0,(age - playback.startedAt) / 20f);
-        float seconds = clip.looping() && clip.seconds() > 0
-            ? localSeconds % clip.seconds() : Math.min(localSeconds,clip.seconds());
-        Map<String,Double> vars = new HashMap<>();
-        vars.put("q.anim_time",(double)seconds);
-        vars.put("query.anim_time",(double)seconds);
-        vars.put("q.life_time",age / 20d);
-        vars.put("query.life_time",age / 20d);
-        vars.put("q.is_moving",render.limbSwingAmplitude > 0.04 ? 1d : 0d);
-        vars.put("q.ground_speed",(double)render.limbSwingAmplitude);
-        vars.put("q.modified_move_speed",(double)render.limbSwingAmplitude);
-        vars.put("q.is_sneaking",render.isInSneakingPose ? 1d : 0d);
-        vars.put("q.is_swimming",render.isSwimming ? 1d : 0d);
-        vars.put("q.is_using_item",render.isUsingItem ? 1d : 0d);
+        float localSeconds = locomotion ? playback.strideSeconds
+            : Math.max(0f,(age - playback.startedAt) / 20f);
+        float seconds = clipTime(clip,localSeconds);
+        playback.lastSampleSeconds = seconds;
+        Map<String,Double> vars = variables(render,age,seconds);
 
         JsonObject bones = object(clip.originalSource(), "bones");
         if (bones == null) return;
+        BedrockPackCatalog.Animation previousClip = playback.previousPhase == null
+            ? null : session.clips.get(playback.previousPhase);
+        JsonObject previousBones = previousClip == null ? null
+            : object(previousClip.originalSource(), "bones");
+        float priorSeconds = previousClip == null ? 0f
+            : clipTime(previousClip,playback.previousSeconds);
+        Map<String,Double> oldVars = variables(render,age,priorSeconds);
 
-        float transition = Math.min(1f, Math.max(0f,(age-playback.changedAt) / 5f));
-        // Preserve the vanilla base pose for item use, look direction and
-        // awkward Minecraft body transformations; apply only bounded rotations.
-        float headBlend = 0.24f * transition;
-        float bodyBlend = 0.40f * transition;
-        float limbBlend = 0.83f * transition;
-        float holding = render.isUsingItem || render.handSwingProgress > 0.04 ? 0.16f : 1f;
+        float fade = smoothstep(clamp((age - playback.changedAt) / 5f,0f,1f));
+        if (fade >= 1f) {
+            previousBones = null;
+            fade = 1f;
+        }
+        // Keep the vanilla head and held-item poses. Source rotations are
+        // blended onto those existing parts; never modify origins or scale.
+        float headBlend = 0.26f;
+        float bodyBlend = 0.25f;
+        float limbBlend = 0.82f;
 
-        sampleAndPose(model.head, bones, "head", seconds,vars, headBlend, 45);
-        // The source waist is a separate parent bone, but vanilla has no waist.
-        // Apply the BODY's rotation to its own vanilla body; waist yaw/roll is a
-        // small secondary influence rather than displacing player geometry.
-        if (object(bones,"body") != null)
-            sampleAndPose(model.body,bones,"body",seconds,vars,bodyBlend,55);
-        else
-            sampleAndPose(model.body,bones,"waist",seconds,vars,bodyBlend,35);
-        sampleAndPose(model.rightArm,bones,"rightarm",seconds,vars,limbBlend*holding,125);
-        sampleAndPose(model.leftArm,bones,"leftarm",seconds,vars,limbBlend*holding,125);
-        sampleAndPose(model.rightLeg,bones,"rightleg",seconds,vars,limbBlend,100);
-        sampleAndPose(model.leftLeg,bones,"leftleg",seconds,vars,limbBlend,100);
+        // The user's video shows the equipped sword arm looking unnaturally
+        // lifted during normal walking. Protect just the equipped hand; leave
+        // the empty other arm free to use the source motion. Attack clips still
+        // animate the sword arm, but don't fully replace Minecraft's hit pose.
+        boolean activeSwing = render.handSwingProgress > 0.04f;
+        float heldWeight = render.isUsingItem ? 0.14f : activeSwing ? 0.65f : 0.42f;
+        boolean rightMain = self.getMainArm() == net.minecraft.util.Arm.RIGHT;
+        float rightHeld = (rightMain && !self.getMainHandStack().isEmpty())
+            || (!rightMain && !self.getOffHandStack().isEmpty()) ? heldWeight : 1f;
+        float leftHeld = (!rightMain && !self.getMainHandStack().isEmpty())
+            || (rightMain && !self.getOffHandStack().isEmpty()) ? heldWeight : 1f;
+
+        sampleAndPose(model.head,bones,previousBones,"head",seconds,priorSeconds,
+            vars,oldVars,fade,headBlend,45);
+        if (object(bones,"body") != null) {
+            sampleAndPose(model.body,bones,previousBones,"body",seconds,priorSeconds,
+                vars,oldVars,fade,bodyBlend,50);
+        } else {
+            sampleAndPose(model.body,bones,previousBones,"waist",seconds,priorSeconds,
+                vars,oldVars,fade,bodyBlend,35);
+        }
+        sampleAndPose(model.rightArm,bones,previousBones,"rightarm",seconds,priorSeconds,
+            vars,oldVars,fade,limbBlend*rightHeld,125);
+        sampleAndPose(model.leftArm,bones,previousBones,"leftarm",seconds,priorSeconds,
+            vars,oldVars,fade,limbBlend*leftHeld,125);
+        sampleAndPose(model.rightLeg,bones,previousBones,"rightleg",seconds,priorSeconds,
+            vars,oldVars,fade,limbBlend,100);
+        sampleAndPose(model.leftLeg,bones,previousBones,"leftleg",seconds,priorSeconds,
+            vars,oldVars,fade,limbBlend,100);
 
         // Clothing layers follow the rotations only, not the source's
         // translations/scales (the latter caused offset geometry in legacy).
@@ -164,22 +205,55 @@ public final class SourcePlayerMotion {
         copyRotation(model.head, model.hat);
     }
 
-    private static void sampleAndPose(ModelPart part, JsonObject bones, String bone,
-                                      float time,Map<String,Double> vars,
-                                      float weight,float maxDegrees) {
+    private static float clipTime(BedrockPackCatalog.Animation clip,float seconds) {
+        return clip.looping() && clip.seconds() > 0f
+            ? seconds % clip.seconds() : Math.min(Math.max(0f,seconds),clip.seconds());
+    }
+    private static boolean isLocomotion(String phase) {
+        return "walk".equals(phase) || "move".equals(phase) || "run".equals(phase);
+    }
+    private static float smoothstep(float t) { return t*t*(3f-2f*t); }
+
+    private static Map<String,Double> variables(PlayerEntityRenderState render,float age,float sec) {
+        Map<String,Double> vars = new HashMap<>();
+        vars.put("q.anim_time",(double)sec);
+        vars.put("query.anim_time",(double)sec);
+        vars.put("q.life_time",age/20d);
+        vars.put("query.life_time",age/20d);
+        vars.put("q.is_moving",render.limbSwingAmplitude>0.04f?1d:0d);
+        vars.put("q.ground_speed",(double)render.limbSwingAmplitude);
+        vars.put("q.modified_move_speed",(double)render.limbSwingAmplitude);
+        vars.put("q.is_sneaking",render.isInSneakingPose?1d:0d);
+        vars.put("q.is_swimming",render.isSwimming?1d:0d);
+        vars.put("q.is_using_item",render.isUsingItem?1d:0d);
+        return vars;
+    }
+
+    private static float[] rotation(JsonObject bones,String bone,float time,Map<String,Double> vars) {
         JsonObject source = object(bones,bone);
-        if (source == null) return;
-        float[] rotation = BedrockMolang.sample(source.get("rotation"),time,vars);
-        if (rotation == null) return;
-        // Bedrock's animation frame angles are absolute. On the Java humanoid
-        // they blend into the existing vanilla pose without moving item pivots.
-        float pitch = radians(clamp(rotation[0],-maxDegrees,maxDegrees));
-        float yaw = radians(clamp(-rotation[1],-65,65));
-        float roll = radians(clamp(-rotation[2],-65,65));
+        return source == null ? null : BedrockMolang.sample(source.get("rotation"),time,vars);
+    }
+
+    private static void sampleAndPose(ModelPart part,JsonObject bones,JsonObject previousBones,
+                                      String bone,float time,float priorTime,
+                                      Map<String,Double> vars,Map<String,Double> oldVars,
+                                      float fade,float weight,float maxDegrees) {
+        float[] target = rotation(bones,bone,time,vars);
+        float[] prior = previousBones == null ? null
+            : rotation(previousBones,bone,priorTime,oldVars);
+        if (target == null && prior == null) return;
+        float[] blended = new float[3];
+        for (int i=0;i<3;i++) {
+            float oldAngle = prior == null ? 0f : prior[i];
+            float newAngle = target == null ? 0f : target[i];
+            blended[i] = lerp(oldAngle,newAngle,fade);
+        }
+        float pitch = radians(clamp(blended[0],-maxDegrees,maxDegrees));
+        float yaw = radians(clamp(-blended[1],-50f,50f));
+        float roll = radians(clamp(-blended[2],-55f,55f));
         if (bone.equals("head")) {
-            // Keep mouse-look tracking from Minecraft's original head pose.
             part.pitch += pitch * weight;
-            part.yaw += yaw * weight * 0.3f;
+            part.yaw += yaw * weight * 0.25f;
             part.roll += roll * weight;
         } else {
             part.pitch = lerp(part.pitch,pitch,weight);
@@ -227,7 +301,15 @@ public final class SourcePlayerMotion {
 
     private record Active(String filename,Map<String,BedrockPackCatalog.Animation> clips) { }
     private static final class Playback {
-        String phase;
-        float startedAt,changedAt,lastAge=Float.NEGATIVE_INFINITY;
+        String phase,previousPhase;
+        float startedAt,changedAt,strideSeconds,previousSeconds,lastSampleSeconds;
+        float lastAge=Float.NaN;
+        float strideRate=1f;
+        void reset() {
+            phase=previousPhase=null;
+            startedAt=changedAt=strideSeconds=previousSeconds=lastSampleSeconds=0f;
+            lastAge=Float.NaN;
+            strideRate=1f;
+        }
     }
 }
