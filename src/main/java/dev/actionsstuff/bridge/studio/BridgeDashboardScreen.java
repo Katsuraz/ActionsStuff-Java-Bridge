@@ -97,7 +97,7 @@ public final class BridgeDashboardScreen extends Screen {
                     result = "No .mcpack found. Put your pack in config/bedrockbridge/packs.";
                 } else {
                     catalog = BedrockPackCatalog.open(found.get(0));
-                    result = "Imported " + catalog.filename + " for preview. NOT enabled in-game.";
+                    result = "Imported " + catalog.filename + ". Click Enable Player Motion to start animations.";
                     if (found.size() > 1) result += " Other packs are selectable in Studio.";
                 }
             } catch (Exception ex) {
