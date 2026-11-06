@@ -284,7 +284,7 @@ public final class BridgeAnimations {
             return running ? first(c, "run_" + dir, "run_forward", "run", "walk_" + dir, "walk_forward", "walk", "move", "idle")
                 : first(c, "walk_" + dir, "walk_forward", "walk", "move", "run_" + dir, "idle");
         }
-        return first(c, "idle", "walk_forward");
+        return first(c, "idle", "bob");
     }
 
     private static String direction(PlayerEntityRenderState state, ClientPlayerEntity player) {
