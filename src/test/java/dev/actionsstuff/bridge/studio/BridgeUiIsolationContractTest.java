@@ -13,6 +13,11 @@ class BridgeUiIsolationContractTest {
         return Files.readString(Path.of("src/main/java/dev/actionsstuff/bridge/" + suffix));
     }
 
+    @Test void exaggeratedSyntheticClipsAreNotPackaged() {
+        assertFalse(Files.exists(Path.of("src/main/resources/assets/actions_stuff_bridge/animations/player.json")),
+            "Do not ship exaggerated test poses with a source-driven animation bridge");
+    }
+
     @Test void defaultLegacyPoseLayerIsNotInjectedUnconditionally() throws Exception {
         String source=source("BridgeAnimations.java");
         assertTrue(source.contains("legacyEnabled = false"));
