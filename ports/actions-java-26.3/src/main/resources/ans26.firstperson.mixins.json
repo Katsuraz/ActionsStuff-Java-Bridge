@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.ans.client.mixin.port26",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "FirstPersonHandsAndItemsRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
