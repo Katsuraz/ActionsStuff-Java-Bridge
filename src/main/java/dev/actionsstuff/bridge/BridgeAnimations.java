@@ -31,6 +31,7 @@ public final class BridgeAnimations {
     public static final Logger LOG = LoggerFactory.getLogger("ActionsStuffBridge");
     private static volatile Map<String, Clip> playerClips = Map.of();
     private static final float MIX = 0.68f;
+    private static int lastDiagnosticTick = Integer.MIN_VALUE;
 
     private BridgeAnimations() {}
 
@@ -62,7 +63,8 @@ public final class BridgeAnimations {
             }
         });
         playerClips = Map.copyOf(imported);
-        LOG.info("Fabric 1.21.11: {} player animation clips loaded", imported.size());
+        lastDiagnosticTick = Integer.MIN_VALUE;
+        LOG.info("Fabric 1.21.11: {} player animation clips loaded: {}", imported.size(), imported.keySet());
     }
 
     public static void apply(BipedEntityModel<?> model, PlayerEntityRenderState state) {
@@ -72,6 +74,13 @@ public final class BridgeAnimations {
         if (phase == null) return;
         Clip clip = library.get(phase);
         if (clip == null) return;
+
+        int diagnosticTick = (int) state.age;
+        if (diagnosticTick % 100 == 0 && diagnosticTick != lastDiagnosticTick) {
+            lastDiagnosticTick = diagnosticTick;
+            LOG.info("Renderer applied bridge animation phase={} ageTick={} limbSwingAmplitude={}",
+                phase, diagnosticTick, state.limbSwingAmplitude);
+        }
 
         float seconds = state.age / 20.0f;
         if (clip.loop && clip.duration > 0) {
