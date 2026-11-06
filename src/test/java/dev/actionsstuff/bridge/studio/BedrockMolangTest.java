@@ -17,7 +17,7 @@ class BedrockMolangTest {
     void preservesOriginalSourceWalkingFormula() {
         var v=Map.of("q.anim_time",0.25d);
         assertEquals(-35.6, BedrockMolang.evaluate("-Math.sin(q.anim_time*360)*37.2+1.6",v),1e-6);
-        assertEquals(-3, BedrockMolang.evaluate("Math.cos(q.anim_time*360+45)*-3",v),1e-6);
+        assertEquals(2.12132034356, BedrockMolang.evaluate("Math.cos(q.anim_time*360+45)*-3",v),1e-6);
     }
     @Test
     void comparisonClampAndTernary() {
