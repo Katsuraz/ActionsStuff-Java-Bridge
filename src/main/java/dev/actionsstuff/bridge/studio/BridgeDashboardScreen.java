@@ -50,10 +50,12 @@ public final class BridgeDashboardScreen extends Screen {
             if (BridgeAnimations.isEnabled()) {
                 BridgeAnimations.disable();
                 message = "Legacy animation adapter disabled. This does not disable OTHER installed mods.";
+            } else if (BridgeAnimations.loadedClipCount() == 0) {
+                message = "No legacy source clips loaded. Open Studio and import your original .mcpack first.";
             } else {
                 OriginalRigRuntime.disable();
                 BridgeAnimations.enable();
-                message = "Legacy six-part test pose adapter enabled for this session.";
+                message = "Legacy six-part source clip adapter enabled for this session.";
             }
             b.setMessage(legacyLabel());
         }).dimensions(left + 12, 160, Math.min(240, contentWidth - 24), buttonHeight).build());
