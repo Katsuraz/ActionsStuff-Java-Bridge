@@ -37,11 +37,28 @@ import java.util.Map;
 public final class BridgeAnimations {
     public static final Logger LOG = LoggerFactory.getLogger("ActionsStuffBridge");
     private static volatile Map<String, Clip> clips = Map.of();
+    // Legacy six-part player posing is opt-in; bundled test clips must not
+    // silently modify the vanilla player at startup.
+    private static volatile boolean legacyEnabled = false;
     private static final HashMap<Integer, Playback> playing = new HashMap<>();
     private static final float FADE_SECONDS = 0.18f;
     private static int lastLoggedTick = Integer.MIN_VALUE;
 
     private BridgeAnimations() {}
+
+    public static boolean isEnabled() { return legacyEnabled; }
+
+    public static void disable() {
+        legacyEnabled = false;
+        playing.clear();
+        LOG.info("Legacy vanilla-biped animation adapter disabled");
+    }
+
+    public static void enable() {
+        legacyEnabled = true;
+        playing.clear();
+        LOG.info("Legacy vanilla-biped animation adapter explicitly enabled");
+    }
 
     public static void reload(ResourceManager manager) {
         Map<String, Clip> newClips = new HashMap<>();
@@ -114,6 +131,7 @@ public final class BridgeAnimations {
         if (imported.containsKey("move")) imported.putIfAbsent("walk_forward", imported.get("move"));
         if (imported.isEmpty()) return 0;
         clips = Map.copyOf(imported);
+        enable();
         playing.clear();
         LOG.info("Direct local Bedrock player motion loaded: {} playable aliases from {}",
             imported.size(), catalog.filename);
@@ -139,6 +157,7 @@ public final class BridgeAnimations {
     }
 
     public static void apply(PlayerEntityModel model, PlayerEntityRenderState render) {
+        if (!legacyEnabled) return;
         Map<String, Clip> available = clips;
         if (available.isEmpty() || render.spectator) return;
         int entityId = render.id;
