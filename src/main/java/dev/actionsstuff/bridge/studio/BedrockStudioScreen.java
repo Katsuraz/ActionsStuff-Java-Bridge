@@ -214,7 +214,8 @@ public final class BedrockStudioScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float deltaTicks) {
-        renderBackground(ctx, mouseX, mouseY, deltaTicks);
+        // Minecraft 1.21.11 permits screen background blur only once per frame.
+        // The studio draws an opaque panel below, so do not request blur here.
         int top = 106, bottom = Math.max(top + 120, height - 36);
         int left = 14;
         int column = Math.max(220, width / 3);
