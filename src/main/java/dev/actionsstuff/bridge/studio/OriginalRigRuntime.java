@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.model.ModelPart;
+import dev.actionsstuff.bridge.SourcePlayerMotion;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,6 +81,8 @@ public final class OriginalRigRuntime {
                     catch (RuntimeException ignored) { }
                 }
             }
+            // Mutually exclusive: do not overlay an old source-mapped vanilla pose.
+            SourcePlayerMotion.disable();
             active = new Active(geometry,model,Map.copyOf(clips),List.copyOf(machines));
             controllerLayers = false;
             return "3D original: " + model.parts.size() + " bones, "

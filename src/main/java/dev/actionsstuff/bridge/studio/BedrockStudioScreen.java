@@ -1,6 +1,7 @@
 package dev.actionsstuff.bridge.studio;
 
 import dev.actionsstuff.bridge.BridgeAnimations;
+import dev.actionsstuff.bridge.SourcePlayerMotion;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -109,7 +110,7 @@ public final class BedrockStudioScreen extends Screen {
         addButton("Bone +", left + (segment + gap) * 5, 75, segment, h, () -> boneIndex++);
 
         int third = Math.max(60, (full - gap * 2) / 3);
-        addButton("Legacy player poses (toggle)", left, 101, third, h, this::toggleLegacy);
+        addButton("Enable / Disable Player Motion", left, 101, third, h, this::toggleSourceMotion);
         source3dButton = addButton("3D: OFF", left + third + gap, 101, third, h, this::toggle3d);
         controllersButton = addButton("Controllers: NEED 3D", left + (third + gap) * 2, 101, third, h,
             this::toggleControllers);
@@ -134,14 +135,15 @@ public final class BedrockStudioScreen extends Screen {
         refreshToggleLabels();
     }
 
-    private void toggleLegacy() {
-        if (BridgeAnimations.isEnabled()) {
-            BridgeAnimations.disable();
-            useInGame = false;
-            status = "Legacy vanilla-biped poses OFF (original 3D layer unchanged)";
+    private void toggleSourceMotion() {
+        if (SourcePlayerMotion.enabled()) {
+            SourcePlayerMotion.disable();
+            status = "Original source player motion OFF; vanilla movement restored";
         } else {
-            enablePlayer();
+            status = SourcePlayerMotion.enable(catalog);
+            if (SourcePlayerMotion.enabled()) useInGame = false;
         }
+        refreshToggleLabels();
     }
 
     private void scan() {
@@ -383,10 +385,10 @@ public final class BedrockStudioScreen extends Screen {
                 Math.max(40, width - rightX - 27), Math.max(45, bottom - top - 125));
         // Display discrete, non-overlapping status lines. These switches are
         // independent, and the legacy adapter is OFF until the user enables it.
-        line(ctx, "SOURCE GEOMETRY PREVIEW | 2D", rightX + 8, bottom - 77, MUTED);
+        line(ctx, "SOURCE BONE INSPECTOR | 2D", rightX + 8, bottom - 77, MUTED);
         line(ctx, "Source UV / materials: incomplete", rightX + 8, bottom - 64, WARNING);
-        line(ctx, "Legacy poses: " + (BridgeAnimations.isEnabled() ? "ON" : "OFF"),
-            rightX + 8, bottom - 48, BridgeAnimations.isEnabled() ? WARNING : ACCENT);
+        line(ctx, "Source player motion: " + (SourcePlayerMotion.enabled() ? "ON" : "OFF"),
+            rightX + 8, bottom - 48, SourcePlayerMotion.enabled() ? ACCENT : MUTED);
         line(ctx, "3D geometry overlay: " + (OriginalRigRuntime.enabled() ? "ON" : "OFF"),
             rightX + 8, bottom - 34, OriginalRigRuntime.enabled() ? WARNING : MUTED);
         line(ctx, "Controller layers: " + (OriginalRigRuntime.controllersEnabled() ? "ON" : "OFF"),
