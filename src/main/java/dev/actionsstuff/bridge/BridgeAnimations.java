@@ -47,6 +47,7 @@ public final class BridgeAnimations {
     private BridgeAnimations() {}
 
     public static boolean isEnabled() { return legacyEnabled; }
+    public static int loadedClipCount() { return clips.size(); }
 
     public static void disable() {
         legacyEnabled = false;
