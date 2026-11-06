@@ -12,8 +12,9 @@ This branch targets **Minecraft 1.21.11** and **Java 21**. It includes an indepe
 3. Install Fabric Loader and Fabric API for Minecraft 1.21.11.
 4. Place the compiled bridge JAR in `.minecraft/mods` (not `resourcepacks`).
 5. Remove older Actions & Stuff **test JARs and test ZIPs** from the test instance to prevent confusion.
-6. Start a separate test world, switch to third person (`F5`), and observe an arm sway while idle and exaggerated limb movement when walking.
-7. Check `logs/latest.log` for `ActionsStuffBridge` and for Mixins or crashes.
+6. Start a separate test world, switch to third person (`F5`). The new **diagnostic** poses are deliberately exaggerated: standing still should produce very obvious arm lifting, and walking should produce extreme arm/leg movement. These are not original Actions & Stuff animations.
+7. Check `logs/latest.log` for `ActionsStuffBridge`. Expected messages: `2 player animation clips loaded: ...` and periodically `Renderer applied bridge animation phase=...`. If no visible movement and the second message is missing, the render hook is not executing. If both messages appear but nothing moves, we need to examine pose application/layering. If no clips load, verify the built JAR contains `assets/actions_stuff_bridge/animations/player.json`.
+8. **Do not install this alongside the older bridge JAR**; remove it first.
 
 No Punchy! Moves dependency is required for this standalone **synthetic smoke-test**.
 The bridge currently accepts numeric rotation keyframes in `assets/actions_stuff_bridge/animations/player.json`. The model is still vanilla, and original Bedrock rig/controllers/animations have **not** been installed or verified.
