@@ -285,7 +285,7 @@ public final class BedrockStudioScreen extends Screen {
         } else {
             line(ctx, "No matching animation clips.", detailsX + 8, top + 36, WARNING);
         }
-        line(ctx, "Bone pivot hierarchy (2D)", rightX + 8, top + 9, ACCENT);
+        line(ctx, "Animated 2D bone pivots", rightX + 8, top + 9, ACCENT);
         drawBones(ctx, geo, chosen, rightX + 9, top + 34,
                 Math.max(40, width - rightX - 27), Math.max(45, bottom - top - 70));
         line(ctx, "Not yet full 3D rendering / MoLang", rightX + 8, bottom - 22, WARNING);
@@ -294,33 +294,53 @@ public final class BedrockStudioScreen extends Screen {
         super.render(ctx, mouseX, mouseY, deltaTicks);
     }
 
+    private record Joint(float x, float y, float angle) { }
+
+    /**
+     * Project the source Bedrock pivot hierarchy into 2D while applying
+     * original numeric animation rotations around parent pivots.
+     * Debug wireframe only, NOT textured or fully 3D model rendering.
+     */
     private void drawBones(DrawContext ctx, BedrockPackCatalog.Geometry model,
                            BedrockPackCatalog.AnimationOption option, int x, int y, int w, int h) {
         if (model == null || model.bones().isEmpty()) return;
         List<BedrockPackCatalog.Bone> bones = model.bones();
-        int max = Math.min(320, bones.size());
+        int max = Math.min(360, bones.size());
         Map<String, BedrockPackCatalog.Bone> lookup = new HashMap<>();
+        Map<String, Joint> solved = new HashMap<>();
+        Map<String, Boolean> visiting = new HashMap<>();
+        var animation = option == null ? null : option.animation();
+        for (var b : bones) lookup.putIfAbsent(b.name(), b);
+
         float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE;
         float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
         for (int i = 0; i < max; i++) {
-            var b = bones.get(i);
-            lookup.put(b.name(), b);
-            minX = Math.min(minX, b.x()); maxX = Math.max(maxX, b.x());
-            minY = Math.min(minY, b.y()); maxY = Math.max(maxY, b.y());
+            var point = resolve(bones.get(i), lookup, solved, visiting, animation, 0);
+            minX = Math.min(minX, point.x);
+            maxX = Math.max(maxX, point.x);
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
         }
-        float scale = Math.min((w - 12f) / Math.max(1f, maxX - minX),
-            (h - 12f) / Math.max(1f, maxY - minY));
-        scale = Math.min(scale, 9f);
-        float midX = (minX + maxX) / 2f;
-        float midY = (minY + maxY) / 2f;
+        if (!Float.isFinite(minX) || !Float.isFinite(maxX) ||
+            !Float.isFinite(minY) || !Float.isFinite(maxY)) return;
+
+        float spanX = Math.max(1f, maxX - minX);
+        float spanY = Math.max(1f, maxY - minY);
+        float scale = Math.min((w - 12f) / spanX, (h - 12f) / spanY);
+        scale = Math.min(9f, Math.max(0.05f, scale));
+        float middleX = (minX + maxX) / 2f;
+        float middleY = (minY + maxY) / 2f;
+
         for (int i = 0; i < max; i++) {
             var b = bones.get(i);
-            int bx = x + w/2 + Math.round((b.x() - midX) * scale);
-            int by = y + h/2 - Math.round((b.y() - midY) * scale);
-            var parent = lookup.get(b.parent());
+            var point = solved.get(b.name());
+            if (point == null) continue;
+            int bx = x + w/2 + Math.round((point.x - middleX) * scale);
+            int by = y + h/2 - Math.round((point.y - middleY) * scale);
+            Joint parent = solved.get(b.parent());
             if (parent != null) {
-                int px = x + w/2 + Math.round((parent.x() - midX) * scale);
-                int py = y + h/2 - Math.round((parent.y() - midY) * scale);
+                int px = x + w/2 + Math.round((parent.x - middleX) * scale);
+                int py = y + h/2 - Math.round((parent.y - middleY) * scale);
                 drawThinLine(ctx, px, py, bx, by, 0xFF687787);
             }
             boolean selected = i == Math.floorMod(boneIndex, bones.size());
@@ -328,6 +348,46 @@ public final class BedrockStudioScreen extends Screen {
             ctx.fill(bx - (selected ? 2 : 1), by - (selected ? 2 : 1),
                 bx + (selected ? 3 : 2), by + (selected ? 3 : 2), color);
         }
+    }
+
+    private Joint resolve(BedrockPackCatalog.Bone bone,
+                          Map<String, BedrockPackCatalog.Bone> lookup,
+                          Map<String, Joint> solved, Map<String, Boolean> visiting,
+                          BedrockPackCatalog.Animation anim, int depth) {
+        Joint cached = solved.get(bone.name());
+        if (cached != null) return cached;
+        if (depth > 96 || visiting.putIfAbsent(bone.name(), true) != null)
+            return new Joint(bone.x(), bone.y(), 0);
+        BedrockPackCatalog.Bone parent = lookup.get(bone.parent());
+        Joint parentJoint = parent == null ? null
+            : resolve(parent, lookup, solved, visiting, anim, depth + 1);
+        float angle = parentJoint == null ? 0 : parentJoint.angle;
+        float x, y;
+        if (parentJoint == null) {
+            x = bone.x();
+            y = bone.y();
+        } else {
+            float dx = bone.x() - parent.x();
+            float dy = bone.y() - parent.y();
+            double ca = Math.cos(angle), sa = Math.sin(angle);
+            x = parentJoint.x + (float)(dx * ca - dy * sa);
+            y = parentJoint.y + (float)(dx * sa + dy * ca);
+        }
+        if (anim != null) {
+            var channel = anim.bones().get(bone.name());
+            if (channel != null && channel.position() != null) {
+                float[] move = channel.position().sample(seconds);
+                if (move != null) { x += move[0]; y += move[1]; }
+            }
+            float[] rot = anim.rotation(bone.name(), seconds);
+            if (rot != null && Float.isFinite(rot[2])) {
+                angle += Math.toRadians(rot[2]);
+            }
+        }
+        Joint result = new Joint(x,y,angle);
+        visiting.remove(bone.name());
+        solved.put(bone.name(), result);
+        return result;
     }
 
     private static void drawThinLine(DrawContext ctx, int x0, int y0, int x1, int y1, int color) {
