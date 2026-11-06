@@ -1,0 +1,26 @@
+# Original Oreville Studios assets: NEVER commit without redistribution rights
+*.mcpack
+*.mcaddon
+*.mcworld
+private-assets/
+private_assets/
+**/assets/actions_stuff_bridge/animations/
+**/assets/actions_stuff_bridge/geo/
+**/assets/actions_stuff_bridge/textures/
+**/assets/actions_stuff_bridge/sounds/
+BRIDGE_IMPORT_AUDIT.json
+*OriginalMovement*.zip
+*.mrpack
+# Build/runtime
+.gradle/
+build/
+run/
+out/
+.idea/
+.vscode/
+*.iml
+*.class
+*.log
+__pycache__/
+*.pyc
+.DS_Store
