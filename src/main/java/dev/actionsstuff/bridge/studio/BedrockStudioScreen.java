@@ -54,52 +54,58 @@ public final class BedrockStudioScreen extends Screen {
 
     @Override
     protected void init() {
-        int x = 14;
-        int h = 20;
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Scan / Reload"), b -> scan())
-            .dimensions(x, 23, 104, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Pack <"), b -> chooseFile(-1))
-            .dimensions(x + 109, 23, 67, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Pack >"), b -> chooseFile(1))
-            .dimensions(x + 180, 23, 67, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Use for player"), b -> enablePlayer())
-            .dimensions(x + 253, 23, 119, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("3D Original ON/OFF"), b -> toggle3d())
-            .dimensions(x + 377, 23, 154, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
-            .dimensions(Math.max(x + 378, this.width - 82), 23, 69, h).build());
+        int left = 14, gap = 6, h = 20;
+        int full = Math.max(280, width - 28);
+        int segment = Math.max(42, (full - gap * 5) / 6);
+        // Four compact tool rows; no hard-coded x=600 button overflow.
+        addButton("Scan packs", left, 23, segment * 2 + gap, h, this::scan);
+        addButton("< Pack", left + (segment + gap) * 2, 23, segment, h, () -> chooseFile(-1));
+        addButton("Pack >", left + (segment + gap) * 3, 23, segment, h, () -> chooseFile(1));
+        addButton("Settings", left + (segment + gap) * 4, 23, segment, h,
+            () -> { if(client != null) client.setScreen(new BridgeDashboardScreen(this)); });
+        addButton("Close", left + (segment + gap) * 5, 23, segment, h, this::close);
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("< Entity"), b -> entity(-1))
-            .dimensions(x, 49, 78, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Entity >"), b -> entity(1))
-            .dimensions(x + 83, 49, 78, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("< Model"), b -> geometry(-1))
-            .dimensions(x + 168, 49, 78, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Model >"), b -> geometry(1))
-            .dimensions(x + 251, 49, 78, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("< Clip"), b -> clip(-1))
-            .dimensions(x + 336, 49, 69, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Clip >"), b -> clip(1))
-            .dimensions(x + 410, 49, 69, h).build());
+        addButton("< Entity", left, 49, segment, h, () -> entity(-1));
+        addButton("Entity >", left + (segment + gap), 49, segment, h, () -> entity(1));
+        addButton("< Model", left + (segment + gap) * 2, 49, segment, h, () -> geometry(-1));
+        addButton("Model >", left + (segment + gap) * 3, 49, segment, h, () -> geometry(1));
+        addButton("< Clip", left + (segment + gap) * 4, 49, segment, h, () -> clip(-1));
+        addButton("Clip >", left + (segment + gap) * 5, 49, segment, h, () -> clip(1));
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Play / Pause"), b -> playing = !playing)
-            .dimensions(x, 75, 94, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("<< 0.2s"), b -> seek(-0.2f))
-            .dimensions(x + 99, 75, 76, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("0.2s >>"), b -> seek(0.2f))
-            .dimensions(x + 180, 75, 76, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Speed -"), b -> speed = Math.max(0.25f, speed / 2))
-            .dimensions(x + 261, 75, 72, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Speed +"), b -> speed = Math.min(4, speed * 2))
-            .dimensions(x + 338, 75, 72, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Bone +"), b -> boneIndex++)
-            .dimensions(x + 415, 75, 72, h).build());
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Controller Layers"), b -> {
-            boolean enabled = OriginalRigRuntime.toggleControllers();
-            status = "Source controller layers " + (enabled ? "ON (experimental)" : "OFF");
-        }).dimensions(x + 493, 75, 130, h).build());
+        addButton("Play / Pause", left, 75, segment, h, () -> playing = !playing);
+        addButton("Back 0.2s", left + (segment + gap), 75, segment, h, () -> seek(-0.2f));
+        addButton("Next 0.2s", left + (segment + gap) * 2, 75, segment, h, () -> seek(0.2f));
+        addButton("Speed -", left + (segment + gap) * 3, 75, segment, h,
+            () -> speed = Math.max(0.25f, speed / 2));
+        addButton("Speed +", left + (segment + gap) * 4, 75, segment, h,
+            () -> speed = Math.min(4f, speed * 2));
+        addButton("Bone +", left + (segment + gap) * 5, 75, segment, h, () -> boneIndex++);
+
+        int third = Math.max(60, (full - gap * 2) / 3);
+        addButton("Legacy player poses (toggle)", left, 101, third, h, this::toggleLegacy);
+        addButton("3D source overlay (toggle)", left + third + gap, 101, third, h, this::toggle3d);
+        addButton("Controller layers (toggle)", left + (third + gap) * 2, 101, third, h,
+            () -> {
+                boolean enabled = OriginalRigRuntime.toggleControllers();
+                status = "Partial Bedrock controller layers " + (enabled ? "enabled" : "disabled");
+            });
 
         if (catalog == null && !loading) scan();
+    }
+
+    private void addButton(String label, int x, int y, int w, int h, Runnable action) {
+        addDrawableChild(ButtonWidget.builder(Text.literal(label), b -> action.run())
+            .dimensions(x, y, w, h).build());
+    }
+
+    private void toggleLegacy() {
+        if (BridgeAnimations.isEnabled()) {
+            BridgeAnimations.disable();
+            useInGame = false;
+            status = "Legacy vanilla-biped poses OFF (original 3D layer unchanged)";
+        } else {
+            enablePlayer();
+        }
     }
 
     private void scan() {
@@ -192,6 +198,8 @@ public final class BedrockStudioScreen extends Screen {
             status = "Import a pack first";
             return;
         }
+        // Keep experimental old and new render paths isolated for diagnosis.
+        OriginalRigRuntime.disable();
         int loaded = BridgeAnimations.loadBedrockPlayer(catalog);
         useInGame = loaded > 0;
         status = useInGame ? "Loaded " + loaded + " source-derived clips into player renderer"
@@ -209,6 +217,8 @@ public final class BedrockStudioScreen extends Screen {
             return;
         }
         BedrockPackCatalog.Geometry selected = selectedGeometry();
+        BridgeAnimations.disable();
+        useInGame = false;
         status = OriginalRigRuntime.enable(catalog, selected);
         if (OriginalRigRuntime.enabled()) {
             status += " | only source cube mesh; some UV faces/materials unsupported";
@@ -239,7 +249,7 @@ public final class BedrockStudioScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float deltaTicks) {
         // Minecraft 1.21.11 permits screen background blur only once per frame.
         // The studio draws an opaque panel below, so do not request blur here.
-        int top = 106, bottom = Math.max(top + 120, height - 36);
+        int top = 150, bottom = Math.max(top + 100, height - 50);
         int left = 14;
         int column = Math.max(220, width / 3);
         int detailsX = left + column + 10;
@@ -249,7 +259,7 @@ public final class BedrockStudioScreen extends Screen {
         ctx.fill(detailsX, top, Math.max(detailsX + 190, rightX - 6), bottom, PANEL);
         ctx.fill(rightX, top, width - 14, bottom, PANEL);
         line(ctx, "BEDROCK PACK BRIDGE / STUDIO", 14, 8, ACCENT);
-        line(ctx, compact(status, width - 35), 14, height - 24, loading ? WARNING : MUTED);
+        line(ctx, compact(status, width - 35), 14, height - 25, loading ? WARNING : MUTED);
         if (catalog == null) {
             line(ctx, "No pack imported. Copy a .mcpack into:", 28, top + 20, TEXT);
             line(ctx, compact(packDirectory().toString(), column - 20), 28, top + 36, WARNING);
@@ -259,7 +269,7 @@ public final class BedrockStudioScreen extends Screen {
         }
 
         String entityId = entityNames.isEmpty() ? "none" : entityNames.get(entityIndex);
-        line(ctx, compact(catalog.filename, width - 30), 15, 101, MUTED);
+        line(ctx, compact("LOCAL PACK  |  " + catalog.filename, width - 30), 15, 134, MUTED);
         line(ctx, "Entity: " + entityId, left + 8, top + 9, TEXT);
         line(ctx, "Models " + geoList.size() + " | Clips " + clipList.size(), left + 8, top + 23, MUTED);
         line(ctx, "Bones (top 27, + to inspect next)", left + 8, top + 40, ACCENT);
@@ -314,14 +324,17 @@ public final class BedrockStudioScreen extends Screen {
         }
         line(ctx, "Animated 2D bone pivots", rightX + 8, top + 9, ACCENT);
         drawBones(ctx, geo, chosen, rightX + 9, top + 34,
-                Math.max(40, width - rightX - 27), Math.max(45, bottom - top - 70));
-        line(ctx, "Not yet full 3D rendering / MoLang", rightX + 8, bottom - 22, WARNING);
-        line(ctx, useInGame ? "Vanilla rig: SOURCE CLIPS ACTIVE" : "Vanilla rig: OFF",
-            rightX + 8, bottom - 32, useInGame ? ACCENT : MUTED);
-        line(ctx, OriginalRigRuntime.enabled() ? "Original 3D: ON (experimental)" : "Original 3D: OFF",
-            rightX + 8, bottom - 21, OriginalRigRuntime.enabled() ? ACCENT : MUTED);
-        line(ctx, "Controllers: " + (OriginalRigRuntime.controllersEnabled() ? "ON (partial)" : "OFF"),
-            rightX + 8, bottom - 10, OriginalRigRuntime.controllersEnabled() ? WARNING : MUTED);
+                Math.max(40, width - rightX - 27), Math.max(45, bottom - top - 125));
+        // Display discrete, non-overlapping status lines. These switches are
+        // independent, and the legacy adapter is OFF until the user enables it.
+        line(ctx, "SOURCE GEOMETRY PREVIEW | 2D", rightX + 8, bottom - 77, MUTED);
+        line(ctx, "Source UV / materials: incomplete", rightX + 8, bottom - 64, WARNING);
+        line(ctx, "Legacy poses: " + (BridgeAnimations.isEnabled() ? "ON" : "OFF"),
+            rightX + 8, bottom - 48, BridgeAnimations.isEnabled() ? WARNING : ACCENT);
+        line(ctx, "3D geometry overlay: " + (OriginalRigRuntime.enabled() ? "ON" : "OFF"),
+            rightX + 8, bottom - 34, OriginalRigRuntime.enabled() ? WARNING : MUTED);
+        line(ctx, "Controller layers: " + (OriginalRigRuntime.controllersEnabled() ? "ON" : "OFF"),
+            rightX + 8, bottom - 20, OriginalRigRuntime.controllersEnabled() ? WARNING : MUTED);
         super.render(ctx, mouseX, mouseY, deltaTicks);
     }
 
