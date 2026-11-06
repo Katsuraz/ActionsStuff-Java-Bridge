@@ -117,9 +117,8 @@ public final class SourcePlayerMotion {
         // switching walk <-> move so neither leg snaps back to frame zero.
         boolean locomotion = isLocomotion(phase);
         float speed = (float)self.getVelocity().horizontalLength();
-        float targetRate = clamp(speed / (self.isSprinting() ? 0.18f : 0.11f),0.7f,1.7f);
-        if (!Float.isFinite(playback.strideRate)) playback.strideRate = 1f;
-        playback.strideRate = lerp(playback.strideRate,targetRate,clamp(deltaTicks * 0.14f,0,0.4f));
+        playback.strideRate = SourceMotionTiming.rate(playback.strideRate,
+            speed,self.isSprinting(),deltaTicks);
 
         if (!phase.equals(playback.phase)) {
             playback.previousPhase = playback.phase;
@@ -131,7 +130,8 @@ public final class SourcePlayerMotion {
                 playback.strideSeconds = 0f;
             }
         }
-        if (locomotion) playback.strideSeconds += deltaTicks / 20f * playback.strideRate;
+        if (locomotion) playback.strideSeconds =
+            SourceMotionTiming.advance(playback.strideSeconds,deltaTicks,playback.strideRate);
         else if (playback.previousPhase != null && !locomotion && !isLocomotion(playback.previousPhase)) {
             playback.strideSeconds = 0f;
         }
@@ -154,7 +154,7 @@ public final class SourcePlayerMotion {
             : clipTime(previousClip,playback.previousSeconds);
         Map<String,Double> oldVars = variables(render,age,priorSeconds);
 
-        float fade = smoothstep(clamp((age - playback.changedAt) / 5f,0f,1f));
+        float fade = SourceMotionTiming.crossfade(age,playback.changedAt,5f);
         if (fade >= 1f) {
             previousBones = null;
             fade = 1f;
@@ -212,7 +212,6 @@ public final class SourcePlayerMotion {
     private static boolean isLocomotion(String phase) {
         return "walk".equals(phase) || "move".equals(phase) || "run".equals(phase);
     }
-    private static float smoothstep(float t) { return t*t*(3f-2f*t); }
 
     private static Map<String,Double> variables(PlayerEntityRenderState render,float age,float sec) {
         Map<String,Double> vars = new HashMap<>();
