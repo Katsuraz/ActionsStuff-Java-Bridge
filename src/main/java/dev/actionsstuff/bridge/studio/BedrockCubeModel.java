@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPartData;
 import net.minecraft.client.model.ModelTransform;
 
@@ -108,7 +109,7 @@ public final class BedrockCubeModel {
                 children.computeIfAbsent(n.parent, k -> new ArrayList<>()).add(n);
             else roots.add(n);
         }
-        ModelPartData base = new ModelPartData(List.of(), ModelTransform.NONE);
+        ModelPartData base = new ModelData().getRoot();
         Set<String> added = new HashSet<>();
         Map<String,float[]> defaultRotations = new HashMap<>();
         for (Node root : roots) {
