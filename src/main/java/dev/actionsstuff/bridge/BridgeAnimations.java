@@ -56,6 +56,7 @@ public final class BridgeAnimations {
     }
 
     public static void enable() {
+        SourcePlayerMotion.disable();
         legacyEnabled = true;
         playing.clear();
         LOG.info("Legacy vanilla-biped animation adapter explicitly enabled");
