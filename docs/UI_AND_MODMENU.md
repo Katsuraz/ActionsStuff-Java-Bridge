@@ -1,3 +1,13 @@
+## Alpha.2 — 3D and controller toggle diagnosis
+
+- **3D ON is conditional on compatible geometry.** Many original Actions & Stuff player-linked entries are facial/accessory meshes selected by Bedrock visibility and material controllers, *not standalone player models*. Such geometry is intentionally blocked from the experimental world overlay, and the button now reads `3D: BLOCKED` with a concrete source-model reason.
+- **Controllers depend on an active supported 3D rig AND at least one usable imported animation controller.** The UI now reads `Controllers: NEED 3D` or `Controllers: NO DATA` instead of appearing to toggle silently. An unsupported expression doesn't activate a controller.
+- **Mod Menu now offers a real 3D enable/disable action**, not only a Disable button. For a new game session, open Studio and scan the original local `.mcpack` first; Mod Menu can then reuse the imported pack. If a compatible full-body mesh is not available, it explains why world rendering is blocked instead of displaying all facial/accessory cubes.
+- When starting original 3D successfully, the legacy pose adapter is switched off. A failed attempt to enable 3D does *not* silently disable an already-active legacy animation test.
+- The selected model can always be inspected in Studio regardless of whether it is safe for in-world rendering.
+
+**This is not yet complete 3D Actions & Stuff support.** Source render-controller visibility, texture/material rules, custom attachments to the built-in Bedrock humanoid, and full MoLang still need implementations. The toggles should not imply those systems are finished.
+
 # Bedrock Studio UI & optional Mod Menu integration — 1.21.11
 
 This is the same Actions & Stuff Java Bridge project (not a replacement mod). The code remains in this repository, but its experimental render systems are now separated for safer testing.
