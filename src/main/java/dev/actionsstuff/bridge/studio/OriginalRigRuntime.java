@@ -28,11 +28,18 @@ public final class OriginalRigRuntime {
         active = null;
         controllerLayers = false;
     }
-    public static boolean controllersEnabled() { return active != null && controllerLayers; }
+    public static int controllerCount() { return active == null ? 0 : active.machines.size(); }
+    public static boolean controllersAvailable() { return active != null && !active.machines.isEmpty(); }
+    public static boolean controllersEnabled() { return controllersAvailable() && controllerLayers; }
+    public static String controllerBlockReason() {
+        if (active == null) return "3D renderer is inactive. Enable a supported full-body model first.";
+        if (active.machines.isEmpty())
+            return "The active source rig has no supported Bedrock animation controllers.";
+        return "";
+    }
     public static boolean toggleControllers() {
-        // A toggled-on control with no active source rig would be misleading:
-        // make absent/incompatible custom models unambiguously inactive.
-        if (active == null) {
+        // Controllers cannot drive a model that never passed the source safety gate.
+        if (!controllersAvailable()) {
             controllerLayers = false;
             return false;
         }
@@ -45,12 +52,12 @@ public final class OriginalRigRuntime {
         if (catalog == null) return "No local pack imported";
         if (geometry == null) geometry = BedrockCubeModel.choosePlayerGeometry(catalog);
         if (geometry == null) {
-            active = null;
+            disable();
             return "Source player uses built-in Bedrock body or conditional accessory layers; no safe standalone 3D mesh";
         }
         BedrockModelSafety.Assessment eligibility = BedrockModelSafety.assess(catalog, geometry);
         if (!eligibility.worldSafe()) {
-            active = null;
+            disable();
             return eligibility.reason();
         }
         try {
@@ -74,10 +81,12 @@ public final class OriginalRigRuntime {
                 }
             }
             active = new Active(geometry,model,Map.copyOf(clips),List.copyOf(machines));
+            controllerLayers = false;
             return "3D original: " + model.parts.size() + " bones, "
                 + model.cubeCount + " cubes, " + clips.size() + " source clips, "
                 + active.machines.size() + " controller definitions";
         } catch (RuntimeException ex) {
+            disable();
             return "3D import rejected: " + ex.getMessage();
         }
     }
