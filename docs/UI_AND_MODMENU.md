@@ -8,7 +8,7 @@ This is the same Actions & Stuff Java Bridge project (not a replacement mod). Th
 - Both flows work without uploading or redistributing your original private `.mcpack`.
 
 ## Core change: avoid old/new system overlap
-- The old six-part **legacy player pose engine** no longer auto-applies bundled synthetic clips when Minecraft starts. Default: **OFF**.
+- The old six-part **legacy player pose engine** no longer auto-applies clips when Minecraft starts. Default: **OFF**. The previous exaggerated synthetic test animation file is now **removed from the packaged JAR** entirely. Explicitly import original source clips through Studio to enable it.
 - The original 3D geometry overlay is also opt-in, and the existing safety gate blocks partial facial/accessory meshes.
 - Activating source clips via **Legacy player poses** turns the 3D overlay off. Enabling the 3D overlay disables legacy posing.
 - Controller layers are separate and experimental; they only affect an active original source rig.
