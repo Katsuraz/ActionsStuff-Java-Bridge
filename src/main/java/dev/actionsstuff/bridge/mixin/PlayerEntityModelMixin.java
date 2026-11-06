@@ -1,6 +1,7 @@
 package dev.actionsstuff.bridge.mixin;
 
 import dev.actionsstuff.bridge.BridgeAnimations;
+import dev.actionsstuff.bridge.SourcePlayerMotion;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,5 +21,7 @@ public abstract class PlayerEntityModelMixin {
     )
     private void actionsStuff$applyPlayerAnimation(PlayerEntityRenderState state, CallbackInfo ci) {
         BridgeAnimations.apply((PlayerEntityModel)(Object)this, state);
+        // Source-driven player motion is separate from the old legacy adapter.
+        SourcePlayerMotion.apply((PlayerEntityModel)(Object)this, state);
     }
 }
