@@ -51,7 +51,9 @@ public final class BedrockMolang {
                 post = obj.has("post") ? obj.get("post") : pre;
             }
             if (pre == null || post == null) continue;
-            keys.add(new Key(at,pre,post));
+            boolean catmull = e.isJsonObject() && e.getAsJsonObject().has("lerp_mode")
+                && "catmullrom".equalsIgnoreCase(e.getAsJsonObject().get("lerp_mode").getAsString());
+            keys.add(new Key(at,pre,post,catmull));
         }
         if (keys.isEmpty()) return null;
         keys.sort(Comparator.comparingDouble(Key::time));
@@ -62,6 +64,22 @@ public final class BedrockMolang {
                 float[] a = vector(left.post, context), b = vector(right.pre, context);
                 if (a == null || b == null) return null;
                 float w = Math.max(0,Math.min(1,(time-left.time)/Math.max(0.000001f,right.time-left.time)));
+                if (left.catmull || right.catmull) {
+                    float[] p0 = i >= 2 ? vector(keys.get(i-2).post,context) : a;
+                    float[] p3 = i+1 < keys.size() ? vector(keys.get(i+1).pre,context) : b;
+                    if (p0 != null && p3 != null) {
+                        float[] result = new float[3];
+                        float w2=w*w,w3=w2*w;
+                        for(int axis=0;axis<3;axis++) {
+                            float curve = 0.5f*(2f*a[axis]+(-p0[axis]+b[axis])*w
+                                +(2f*p0[axis]-5f*a[axis]+4f*b[axis]-p3[axis])*w2
+                                +(-p0[axis]+3f*a[axis]-3f*b[axis]+p3[axis])*w3);
+                            if (!Float.isFinite(curve)) return null;
+                            result[axis]=Math.max(-10000f,Math.min(10000f,curve));
+                        }
+                        return result;
+                    }
+                }
                 return new float[] {a[0]+(b[0]-a[0])*w, a[1]+(b[1]-a[1])*w, a[2]+(b[2]-a[2])*w};
             }
         }
@@ -86,7 +104,7 @@ public final class BedrockMolang {
         return result;
     }
 
-    private record Key(float time, JsonElement pre, JsonElement post) { }
+    private record Key(float time, JsonElement pre, JsonElement post, boolean catmull) { }
     public static final class ParseFailure extends RuntimeException {
         public ParseFailure(String message) { super(message); }
     }
