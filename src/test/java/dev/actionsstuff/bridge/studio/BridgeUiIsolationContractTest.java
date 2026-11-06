@@ -27,7 +27,7 @@ class BridgeUiIsolationContractTest {
 
     @Test void studioHasDistinctControlsAndNoDuplicateBackgroundBlur() throws Exception {
         String source=source("studio/BedrockStudioScreen.java");
-        assertTrue(source.contains("this::toggleLegacy"));
+        assertTrue(source.contains("this::toggleSourceMotion"));
         assertTrue(source.contains("OriginalRigRuntime.disable();"));
         assertTrue(source.contains("new BridgeDashboardScreen(this)"));
         assertFalse(source.contains("renderBackground("));
