@@ -13,7 +13,26 @@ A separate, opt-in, source-driven 3D player geometry **overlay** is integrated i
 - Keeps the earlier vanilla player animation test available under `Use for player`; this is separate from the 3D overlay.
 - A separate **Controller Layers** toggle runs a subset of original Bedrock controller states and transitions with supported source conditions; unknown query values do not trigger transitions.\n- Unit tests for Bedrock archive decoding, basic importer, MoLang expressions, controller transitions, and crash regressions.
 
-### What is NOT finished
+### Experimental accessory-visibility safety fix (v0.5.0-alpha.3)
+
+The source `geometry.oreville_ans.zwjvro` is a conditional face/head detail model,
+not a standalone player body. The user's Bedrock pack selects it via
+`controller.render.oreville_ans.vmmipy` with a visibility condition and
+conditional textures. The previous overlay rendered every cube of that model
+without the original Bedrock visibility/material logic, creating floating
+pieces around Steve.
+
+The Studio now imports the source `render_controllers` and their player
+conditions for inspection. **World rendering is blocked for partial/conditional
+accessory meshes**, and automatic model selection permits only a clearly
+complete standalone 3D player body. The original pack's base body is the
+built-in `geometry.humanoid.custom`; that is not a custom geometry stored in
+the resource archive. For that pack, the new safety mode may legitimately
+show *no additional world overlay* until the render controller and
+texture/material translation are implemented. The rest of the Studio remains
+available, and the user's original files remain private.
+
+## What is NOT finished
 - **This is not a complete original Actions & Stuff 3D replacement.** It is a new **rendered overlay** above the vanilla character. We have not implemented original avatar replacement, correct multi-pass skins, armor, render controllers, all UV faces, missing vanilla geometry, per-face UV, material opacity or entity texture switching.
 - Full MoLang variable scope, condition/query data, assignment/execution, random operators and **complete** animation controller state machines still need implementation. The new controller interpreter supports an explicit subset (initial state, supported transitions and active animations); unknown expressions are rejected, not guessed.
 - Bedrock animation alias state selection currently maps some Java player actions to known source aliases. It does not yet execute source controllers.
