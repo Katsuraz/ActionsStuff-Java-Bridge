@@ -1,28 +1,36 @@
-# Actions & Stuff Java Bridge — Fabric 1.21.11 source-driven alpha
+# Bedrock Pack Bridge Studio — Fabric 1.21.11 experimental alpha
 
-Independent, experimental client-side Minecraft Java animation runtime for private testing of a Bedrock asset port.
+This branch adds a **local-only Bedrock pack inspector and player-motion preview** to the existing Fabric bridge. The user may privately test the Actions & Stuff 1.13 pack they supplied. It is NOT a complete Bedrock resource-pack compatibility layer, 3D Bedrock renderer, or full Java port.
 
-## First test: Fabric 1.21.11
+## Installation
+1. Download the **compiled non-sources JAR** from this branch's successful GitHub Actions build. Use Java 21, Fabric Loader for Minecraft **1.21.11**, and Fabric API.
+2. Remove older `actions-stuff-java-bridge` JARs from the same Minecraft instance.
+3. Put the compiled JAR in **mods**, not resourcepacks.
+4. Put your personal original `Actions and Stuff 1.13.mcpack` in `<your Minecraft game directory>/config/bedrockbridge/packs/`.
+   If you use a version-specific TLauncher instance, that means `I:\\AppData\\Roaming\\.minecraft\\versions\\AAS\\config\\bedrockbridge\\packs\\`.
+5. Start a test world. Press **B** to open *Bedrock Pack Bridge Studio*.
+6. Click **Scan / Reload**, choose the pack if more than one is present, browse an entity/model/animation, and use Play/Pause, seek, speed and bone controls.
+7. Press **Use for player** if you want the numerical original player motion channels applied in third person. This **does not use the original custom mesh**, only the six vanilla body parts and body pivots currently supported by the bridge.
+8. Close the studio and change perspective with F5. If the game crashes, supply `logs/latest.log` and the crash report.
 
-This branch targets **Minecraft 1.21.11** and **Java 21**. The bundled example still uses independent synthetic poses; to test **original source movements**, enable the privately generated resource pack built from the tester's own Actions & Stuff 1.13 copy.
+## Studio v0.4 features
+- Directly reads a local .mcpack and the original BRARCHIVE v1 packed JSON without exporting or uploading assets.
+- Indexes Bedrock entity descriptions, geometry IDs, bone parent/pivot hierarchy, cube counts, animation IDs, keyframe tracks and controller state names.
+- Entity/model/clip navigation, keyframe timeline with speed/seek/play controls and numeric per-bone inspector.
+- 2D bone-pivot graph (NOT a skinned 3D Bedrock mesh).
+- Optional local original-player animation import directly into the existing Fabric player model, without a manually converted ZIP.
+- Unit tests for archive bounds, traversal rejection, entity alias resolution and numeric keyframe interpolation.
 
-### Installation
-1. Build with the GitHub Actions workflow (or Gradle 9.3.0 and JDK 21).
-2. Download the built JAR from Actions (do not install the `-sources.jar`).
-3. Install Fabric Loader and Fabric API for Minecraft 1.21.11.
-4. Place the compiled bridge JAR in `.minecraft/mods` (not `resourcepacks`).
-5. Remove older Actions & Stuff **test JARs and test ZIPs** from the test instance to prevent confusion.
-6. Start a separate test world, switch to third person (`F5`). The new **diagnostic** poses are deliberately exaggerated: standing still should produce very obvious arm lifting, and walking should produce extreme arm/leg movement. These are not original Actions & Stuff animations.
-7. Check `logs/latest.log` for `ActionsStuffBridge`. Expected messages: `2 player animation clips loaded: ...` and periodically `Renderer applied bridge animation phase=...`. If no visible movement and the second message is missing, the render hook is not executing. If both messages appear but nothing moves, we need to examine pose application/layering. If no clips load, verify the built JAR contains `assets/actions_stuff_bridge/animations/player.json`.
-8. **Do not install this alongside the older bridge JAR**; remove it first.
+## Boundaries and known shortcomings
+- Geometry and texture mapping are **not rendered in the world**. The studio's bone graph is a 2D debug visualization.
+- Only numeric vector animation keyframes can be evaluated; many authentic Actions & Stuff channels use **MoLang**, blend controllers, conditions and custom bone names, and are currently incomplete.
+- Default pack data only: SP0, SP1 and SP2 variant subpacks are not indexed in this prototype.
+- `Use for player` currently maps a subset of original player action aliases onto Java vanilla-model body parts. No faithful custom-rig, death-system, first-person, mob animation or 3D material implementation yet.
+- Resource reload resets the prior playback data. Open Studio and press Use for player again if needed.
+- A successful CI build only proves compilation and synthetic unit tests, not that the screen or gameplay works on your PC.
 
-No Punchy! Moves dependency is required for the standalone animation runtime. The original private resource ZIP overrides the bundled synthetic clips when enabled above other resource packs.
-The bridge currently accepts numeric rotation/position/scale keyframes in `assets/actions_stuff_bridge/animations/player.json`. The model is still vanilla, and original Bedrock rig/controllers/animations have **not** been installed or verified.
+## Privacy and rights
+The original Oreville Studios assets remain on your own computer. **Never commit or publish the .mcpack or extracted/converted source assets** in this public repository unless explicit redistribution permission is provided. Testing permission is not publication permission.
 
-### Source handling
-Original Actions & Stuff files and any converted asset copies must stay on the tester's device, not in this repository. The user reports permission to **test**, not a public redistribution license.
-
-### Future plans
-Faithful original player movement and custom rig, Mob model/controller systems, first-person poses, equipment/holsters, particles/sounds, followed by additional Fabric version adapters.
-
-See [PROJECT_STATUS.md](PROJECT_STATUS.md).
+## GitHub
+This branch builds with Java 21 and the existing Fabric 1.21.11 workflow. Do not merge to main before client runtime tests.

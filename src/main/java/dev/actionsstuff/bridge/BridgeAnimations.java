@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.actionsstuff.bridge.studio.BedrockPackCatalog;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
@@ -71,6 +72,70 @@ public final class BridgeAnimations {
         playing.clear();
         lastLoggedTick = Integer.MIN_VALUE;
         LOG.info("Loaded {} private/synthetic player clips: {}", clips.size(), clips.keySet());
+    }
+
+    /**
+     * Directly loads numeric player animation tracks from a locally indexed .mcpack.
+     * It never writes or transmits the original asset data. Unsupported MoLang
+     * channels are skipped and reported by the Studio inspector.
+     */
+    public static int loadBedrockPlayer(BedrockPackCatalog catalog) {
+        var player = catalog.entities.get("minecraft:player");
+        if (player == null) return 0;
+        Map<String, Clip> imported = new HashMap<>();
+        for (var alias : player.animations().entrySet()) {
+            if (!List.of("walk", "move", "bob", "humanoid_base_pose", "attack",
+                    "hurt", "jump", "fall", "swim", "fly", "run", "sneak",
+                    "eat", "use", "death").contains(alias.getKey())) continue;
+            BedrockPackCatalog.Animation anim = catalog.animations.get(alias.getValue());
+            if (anim == null) continue;
+            JsonObject original = new JsonObject();
+            original.addProperty("animation_length", anim.seconds());
+            original.addProperty("loop", anim.looping());
+            JsonObject bones = new JsonObject();
+            for (var bone : anim.bones().entrySet()) {
+                JsonObject channels = new JsonObject();
+                putChannel(channels, "rotation", bone.getValue().rotation());
+                putChannel(channels, "position", bone.getValue().position());
+                putChannel(channels, "scale", bone.getValue().scale());
+                if (!channels.entrySet().isEmpty()) bones.add(bone.getKey(), channels);
+            }
+            if (bones.entrySet().isEmpty()) continue;
+            original.add("bones", bones);
+            try {
+                imported.put(alias.getKey(), Clip.parse(original));
+            } catch (RuntimeException ex) {
+                LOG.warn("Ignoring unsupported original animation {}: {}",
+                    alias.getKey(), ex.getMessage());
+            }
+        }
+        if (imported.containsKey("walk")) imported.putIfAbsent("walk_forward", imported.get("walk"));
+        if (imported.containsKey("bob")) imported.putIfAbsent("idle", imported.get("bob"));
+        if (imported.containsKey("move")) imported.putIfAbsent("walk_forward", imported.get("move"));
+        if (imported.isEmpty()) return 0;
+        clips = Map.copyOf(imported);
+        playing.clear();
+        LOG.info("Direct local Bedrock player motion loaded: {} playable aliases from {}",
+            imported.size(), catalog.filename);
+        return imported.size();
+    }
+
+    private static void putChannel(JsonObject dst, String name, BedrockPackCatalog.Track track) {
+        if (track == null) return;
+        JsonObject keyframes = new JsonObject();
+        for (var key : track.keys()) {
+            JsonObject frame = new JsonObject();
+            frame.add("pre", vecToJson(key.pre()));
+            frame.add("post", vecToJson(key.post()));
+            keyframes.add(Float.toString(key.time()), frame);
+        }
+        dst.add(name, keyframes);
+    }
+
+    private static JsonArray vecToJson(float[] vector) {
+        JsonArray array = new JsonArray();
+        for (float value : vector) array.add(value);
+        return array;
     }
 
     public static void apply(PlayerEntityModel model, PlayerEntityRenderState render) {
@@ -211,15 +276,15 @@ public final class BridgeAnimations {
                 if (player.getVelocity().y < -0.045) return first(c, "fall", "idle");
             }
         }
-        if (state.isInSneakingPose) return first(c, "sneak", "walk_forward", "idle");
+        if (state.isInSneakingPose) return first(c, "sneak", "walk_forward", "walk", "idle");
         if (state.limbSwingAmplitude > 0.045f) {
             String dir = direction(state, player);
             boolean running = state.limbSwingAmplitude > 0.52f
                     || player != null && player.getId() == state.id && player.isSprinting();
-            return running ? first(c, "run_" + dir, "run_forward", "walk_" + dir, "walk_forward", "idle")
-                : first(c, "walk_" + dir, "walk_forward", "run_" + dir, "idle");
+            return running ? first(c, "run_" + dir, "run_forward", "run", "walk_" + dir, "walk_forward", "walk", "move", "idle")
+                : first(c, "walk_" + dir, "walk_forward", "walk", "move", "run_" + dir, "idle");
         }
-        return first(c, "idle", "walk_forward");
+        return first(c, "idle", "bob");
     }
 
     private static String direction(PlayerEntityRenderState state, ClientPlayerEntity player) {
