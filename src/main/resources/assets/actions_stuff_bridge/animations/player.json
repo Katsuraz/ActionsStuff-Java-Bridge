@@ -1,0 +1,43 @@
+{
+  "_comment": "Independent synthetic keyframes for testing the Java bridge. NOT Actions & Stuff assets.",
+  "clips": {
+    "idle": {
+      "animation_length": 2.0,
+      "loop": true,
+      "bones": {
+        "right_arm": {
+          "rotation": {
+            "0.0": [2, 0, -3],
+            "1.0": [-4, 0, -8],
+            "2.0": [2, 0, -3]
+          }
+        },
+        "left_arm": {
+          "rotation": {
+            "0.0": [-2, 0, 3],
+            "1.0": [4, 0, 8],
+            "2.0": [-2, 0, 3]
+          }
+        }
+      }
+    },
+    "walk": {
+      "animation_length": 0.8,
+      "loop": true,
+      "bones": {
+        "right_arm": {
+          "rotation": {"0.0": [-28, 0, 0], "0.4": [28, 0, 0], "0.8": [-28, 0, 0]}
+        },
+        "left_arm": {
+          "rotation": {"0.0": [28, 0, 0], "0.4": [-28, 0, 0], "0.8": [28, 0, 0]}
+        },
+        "right_leg": {
+          "rotation": {"0.0": [30, 0, 0], "0.4": [-30, 0, 0], "0.8": [30, 0, 0]}
+        },
+        "left_leg": {
+          "rotation": {"0.0": [-30, 0, 0], "0.4": [30, 0, 0], "0.8": [-30, 0, 0]}
+        }
+      }
+    }
+  }
+}
