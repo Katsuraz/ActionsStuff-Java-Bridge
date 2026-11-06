@@ -7,7 +7,7 @@ import net.minecraft.util.Identifier;
 public final class BridgeReloadListener implements SimpleSynchronousResourceReloadListener {
     @Override
     public Identifier getFabricId() {
-        return new Identifier(ActionsStuffBridgeClient.MOD_ID, "bridge_animation_reload");
+        return Identifier.of(ActionsStuffBridgeClient.MOD_ID, "bridge_animation_reload");
     }
 
     @Override
