@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.model.ModelPart;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -19,10 +20,13 @@ import java.util.Map;
  */
 public final class OriginalRigRuntime {
     private static Active active;
+    private static boolean controllerLayers;
     private OriginalRigRuntime() {}
 
     public static boolean enabled() { return active != null; }
     public static void disable() { active = null; }
+    public static boolean controllersEnabled() { return controllerLayers; }
+    public static boolean toggleControllers() { return controllerLayers = !controllerLayers; }
     public static String geometryId() {return active==null?"none":active.geometry.id();}
 
     public static String enable(BedrockPackCatalog catalog, BedrockPackCatalog.Geometry geometry) {
@@ -40,9 +44,20 @@ public final class OriginalRigRuntime {
                     if (clip != null) clips.put(alias.getKey().toLowerCase(Locale.ROOT),clip);
                 }
             }
-            active = new Active(geometry,model,Map.copyOf(clips));
+            var machines = new ArrayList<BedrockControllerMachine>();
+            if (player != null) {
+                for (String id : player.animations().values()) {
+                    if (!id.startsWith("controller.animation.")) continue;
+                    var definition = catalog.controllers.get(id);
+                    if (definition == null || machines.size() >= 64) continue;
+                    try { machines.add(new BedrockControllerMachine(definition)); }
+                    catch (RuntimeException ignored) { }
+                }
+            }
+            active = new Active(geometry,model,Map.copyOf(clips),List.copyOf(machines));
             return "3D original: " + model.parts.size() + " bones, "
-                + model.cubeCount + " cubes, " + clips.size() + " source clips";
+                + model.cubeCount + " cubes, " + clips.size() + " source clips, "
+                + active.machines.size() + " controller definitions";
         } catch (RuntimeException ex) {
             return "3D import rejected: " + ex.getMessage();
         }
@@ -66,10 +81,30 @@ public final class OriginalRigRuntime {
         data.model.reset();
         Map<String,Double> variables=variables(state,sec);
 
+        applyAnimation(data.model,animation,sec,variables);
+        if(controllerLayers) {
+            for (BedrockControllerMachine machine : data.machines) {
+                for (String alias : machine.tick(variables)) {
+                    BedrockPackCatalog.Animation layered = data.clips.get(alias.toLowerCase(Locale.ROOT));
+                    if(layered == null) continue;
+                    float controllerTime = Math.max(0,state.age/20f);
+                    if(layered.looping() && layered.seconds() > 0)
+                        controllerTime %= layered.seconds();
+                    else controllerTime=Math.min(controllerTime,layered.seconds());
+                    variables.put("q.anim_time",(double)controllerTime);
+                    applyAnimation(data.model,layered,controllerTime,variables);
+                }
+            }
+        }
+        return data.model;
+    }
+
+    private static void applyAnimation(BedrockCubeModel model,
+            BedrockPackCatalog.Animation animation,float sec, Map<String,Double> variables) {
         JsonObject bones=getObject(animation.originalSource(),"bones");
-        if(bones==null)return data.model;
+        if(bones==null)return;
         for (var entry : bones.entrySet()) {
-            ModelPart part=data.model.parts.get(entry.getKey());
+            ModelPart part=model.parts.get(entry.getKey());
             if(part==null||!entry.getValue().isJsonObject())continue;
             JsonObject tracks=entry.getValue().getAsJsonObject();
             float[] rotation=BedrockMolang.sample(tracks.get("rotation"),sec,variables);
@@ -91,7 +126,6 @@ public final class OriginalRigRuntime {
                 part.zScale*=clamp(scale[2],0.05f,5);
             }
         }
-        return data.model;
     }
 
     private static String choose(Map<String,BedrockPackCatalog.Animation> a,PlayerEntityRenderState state) {
@@ -141,13 +175,16 @@ public final class OriginalRigRuntime {
         final BedrockPackCatalog.Geometry geometry;
         final BedrockCubeModel model;
         final Map<String,BedrockPackCatalog.Animation> clips;
+        final List<BedrockControllerMachine> machines;
         String phase;
         float startAge,lastAge=Float.NEGATIVE_INFINITY;
         Active(BedrockPackCatalog.Geometry geometry,BedrockCubeModel model,
-               Map<String,BedrockPackCatalog.Animation> clips) {
+               Map<String,BedrockPackCatalog.Animation> clips,
+               List<BedrockControllerMachine> machines) {
             this.geometry=geometry;
             this.model=model;
             this.clips=clips;
+            this.machines=machines;
         }
     }
 }
