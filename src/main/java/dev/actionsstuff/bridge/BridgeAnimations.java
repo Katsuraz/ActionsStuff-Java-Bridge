@@ -103,7 +103,9 @@ public final class BridgeAnimations {
         float fade = clamp((now - playback.changedAt) / (FADE_SECONDS * 20f), 0, 1);
         // Soft cubic fade. The old phase is sampled from its last pose.
         fade = fade * fade * (3 - 2 * fade);
-        Clip previous = available.get(playback.previous);
+        // The first rendered player frame has no previous animation.
+        // Map.copyOf(...) rejects null keys, so never look one up.
+        Clip previous = ClipLookup.previousOrNull(available, playback.previous);
         float priorTime = previous == null ? 0 : normalizeTime(previous, playback.previousSeconds);
 
         for (String bone : List.of("body", "waist", "head", "right_arm", "left_arm",
