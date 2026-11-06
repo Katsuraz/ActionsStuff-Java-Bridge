@@ -6,7 +6,8 @@
   "description": "Experimental Fabric 1.21.11 animation bridge. No Oreville assets bundled.",
   "environment": "client",
   "entrypoints": {
-    "client": ["dev.actionsstuff.bridge.ActionsStuffBridgeClient"]
+    "client": ["dev.actionsstuff.bridge.ActionsStuffBridgeClient"],
+    "modmenu": ["dev.actionsstuff.bridge.studio.BedrockModMenuIntegration"]
   },
   "mixins": ["actions_stuff_bridge.mixins.json"],
   "depends": {
@@ -14,5 +15,8 @@
     "minecraft": "1.21.11",
     "java": ">=21",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
   }
 }

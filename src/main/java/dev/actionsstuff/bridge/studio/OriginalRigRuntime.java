@@ -24,9 +24,20 @@ public final class OriginalRigRuntime {
     private OriginalRigRuntime() {}
 
     public static boolean enabled() { return active != null; }
-    public static void disable() { active = null; }
-    public static boolean controllersEnabled() { return controllerLayers; }
-    public static boolean toggleControllers() { return controllerLayers = !controllerLayers; }
+    public static void disable() {
+        active = null;
+        controllerLayers = false;
+    }
+    public static boolean controllersEnabled() { return active != null && controllerLayers; }
+    public static boolean toggleControllers() {
+        // A toggled-on control with no active source rig would be misleading:
+        // make absent/incompatible custom models unambiguously inactive.
+        if (active == null) {
+            controllerLayers = false;
+            return false;
+        }
+        return controllerLayers = !controllerLayers;
+    }
     public static String geometryId() {return active==null?"none":active.geometry.id();}
 
     public static String enable(BedrockPackCatalog catalog, BedrockPackCatalog.Geometry geometry) {
