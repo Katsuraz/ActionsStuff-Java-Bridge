@@ -231,7 +231,7 @@ public final class BedrockPackCatalog {
     public record Controller(String id, List<String> states) { }
     public record AnimationOption(String alias, Animation animation) { }
     public record Bone(String name, String parent, float x, float y, float z, int cubes) { }
-    public record Geometry(String id, List<Bone> bones, int cubes) {
+    public record Geometry(String id, List<Bone> bones, int cubes, JsonObject originalSource) {
         static Geometry parse(JsonObject doc) {
             JsonObject desc = object(doc, "description");
             if (desc == null) return null;
@@ -253,12 +253,12 @@ public final class BedrockPackCatalog {
                 bones.add(new Bone(name, string(bone, "parent", ""),
                     pivot[0], pivot[1], pivot[2], n));
             }
-            return new Geometry(id, List.copyOf(bones), cubeCount);
+            return new Geometry(id, List.copyOf(bones), cubeCount, doc.deepCopy());
         }
     }
 
     public record Animation(String id, float seconds, boolean looping, Map<String, Channels> bones,
-                            int expressionChannels) {
+                            int expressionChannels, JsonObject originalSource) {
         static Animation parse(String id, JsonObject doc) {
             float duration = number(doc.get("animation_length"), 1f);
             if (duration <= 0 || duration > 180 || !Float.isFinite(duration)) duration = 1;
@@ -284,7 +284,7 @@ public final class BedrockPackCatalog {
                     bones.put(e.getKey(), new Channels(r, p, s));
                 }
             }
-            return new Animation(id, duration, loop, Map.copyOf(bones), skipped);
+            return new Animation(id, duration, loop, Map.copyOf(bones), skipped, doc.deepCopy());
         }
         public float[] rotation(String boneName, float sec) {
             Channels ch = bones.get(boneName);
