@@ -1,30 +1,27 @@
-# Actions & Stuff Java Bridge
+# Actions & Stuff Java Bridge — Fabric 1.21.11 alpha
 
-Independent, **experimental** Minecraft Java Fabric runtime for privately testing the adaptation of user-supplied Actions & Stuff Bedrock animation data.
+Independent, experimental client-side Minecraft Java animation runtime for private testing of a Bedrock asset port.
 
-## Status
-- Current runtime source target: **Fabric 1.20.1**.
-- Minecraft 1.21.11 and 26.3: planned adapters, **not yet built or tested**.
-- Real in-game compatibility has **not** been verified.
-- This repository includes code and tooling, not Oreville Studios' copyrighted models, textures, sounds, or converted animation assets.
+## First test: Fabric 1.21.11
 
-## Goals
-1. Interpret original Bedrock animation keyframes and controller states faithfully, rather than approximate movements.
-2. Replace incompatible player and vanilla mob rigs with model-aware animation support.
-3. Add timing, combat, death, swimming, first-person, equipment, particles, and sounds in progressively testable milestones.
-4. Build and test multiple Fabric versions separately.
+This branch targets **Minecraft 1.21.11** and **Java 21**. It includes an independent synthetic idle and walk player animation as a smoke test. **These are not original Actions & Stuff animations.**
 
-## Development rules
-Original Actions & Stuff files are provided only for **private authorized testing**. **Never commit or upload the .mcpack, source textures, geometry, animations, converted copies, or private test ZIPs.** The user reports permission to test; public redistribution permission has not been established.
+### Installation
+1. Build with the GitHub Actions workflow (or Gradle 9.3.0 and JDK 21).
+2. Download the built JAR from Actions (do not install the `-sources.jar`).
+3. Install Fabric Loader and Fabric API for Minecraft 1.21.11.
+4. Place the compiled bridge JAR in `.minecraft/mods` (not `resourcepacks`).
+5. Remove older Actions & Stuff **test JARs and test ZIPs** from the test instance to prevent confusion.
+6. Start a separate test world, switch to third person (`F5`), and observe an arm sway while idle and exaggerated limb movement when walking.
+7. Check `logs/latest.log` for `ActionsStuffBridge` and for Mixins or crashes.
 
-## Building
-See `PROJECT_STATUS.md`. Run the GitHub Actions build workflow or use Java 17 + Gradle 8.7 for the initial Fabric 1.20.1 foundation. A passing compile is not proof of working visuals.
+No Punchy! Moves dependency is required for this standalone **synthetic smoke-test**.
+The bridge currently accepts numeric rotation keyframes in `assets/actions_stuff_bridge/animations/player.json`. The model is still vanilla, and original Bedrock rig/controllers/animations have **not** been installed or verified.
 
-## Milestones
-- [ ] Verify Fabric 1.20.1 compilation and client startup
-- [ ] Validate source-defined player movement and controller transitions
-- [ ] Build faithful custom model and bone hierarchy support
-- [ ] Implement original vanilla-mob animations and state transitions
-- [ ] Add first-person actions, equipment, effects and sound
-- [ ] Create and verify 1.21.11 adapter
-- [ ] Create and verify 26.3 adapter
+### Source handling
+Original Actions & Stuff files and any converted asset copies must stay on the tester's device, not in this repository. The user reports permission to **test**, not a public redistribution license.
+
+### Future plans
+Faithful original player movement and custom rig, Mob model/controller systems, first-person poses, equipment/holsters, particles/sounds, followed by additional Fabric version adapters.
+
+See [PROJECT_STATUS.md](PROJECT_STATUS.md).
