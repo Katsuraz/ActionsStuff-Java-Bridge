@@ -26,6 +26,8 @@ public final class BridgeDashboardScreen extends Screen {
     private static final int WARNING = 0xFFFFCC82;
 
     private final Screen previous;
+    private ButtonWidget original3dButton;
+    private ButtonWidget controllersButton;
     private String message = "No renderer changes made. Import the original Bedrock pack in Studio.";
 
     public BridgeDashboardScreen(Screen previous) {
@@ -60,26 +62,72 @@ public final class BridgeDashboardScreen extends Screen {
             b.setMessage(legacyLabel());
         }).dimensions(left + 12, 160, Math.min(240, contentWidth - 24), buttonHeight).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Disable 3D overlay"), b -> {
-            OriginalRigRuntime.disable();
-            message = "This bridge's source geometry overlay is now disabled.";
+        original3dButton = addDrawableChild(ButtonWidget.builder(threeDLabel(), b -> {
+            if (OriginalRigRuntime.enabled()) {
+                OriginalRigRuntime.disable();
+                message = "Source 3D overlay disabled.";
+            } else {
+                BedrockPackCatalog pack;
+                BedrockPackCatalog.Geometry selected = null;
+                if (previous instanceof BedrockStudioScreen studio) {
+                    pack = studio.currentPack();
+                    selected = studio.currentGeometry();
+                } else {
+                    pack = BedrockStudioScreen.latestImportedPack();
+                }
+                if (pack == null) {
+                    message = "Open Animation Studio and scan your local .mcpack first.";
+                } else {
+                    String result = OriginalRigRuntime.enable(pack, selected);
+                    if (OriginalRigRuntime.enabled()) {
+                        BridgeAnimations.disable();
+                        message = result + " | partial 3D implementation";
+                    } else message = result;
+                }
+            }
+            refreshControls();
         }).dimensions(left + 12, 210, Math.min(240, contentWidth - 24), buttonHeight).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Controller layers: " +
-            (OriginalRigRuntime.controllersEnabled() ? "ON" : "OFF")), b -> {
-            boolean on = OriginalRigRuntime.toggleControllers();
-            b.setMessage(Text.literal("Controller layers: " + (on ? "ON" : "OFF")));
-            message = on ? "Experimental controller layers ON; useful only with an active 3D source rig."
-                : "Experimental controller layers OFF.";
+        controllersButton = addDrawableChild(ButtonWidget.builder(controllerLabel(), b -> {
+            if (!OriginalRigRuntime.controllersAvailable()) {
+                message = OriginalRigRuntime.controllerBlockReason();
+            } else {
+                boolean on = OriginalRigRuntime.toggleControllers();
+                message = on ? "Partial Bedrock controller playback ON" : "Controller playback OFF";
+            }
+            refreshControls();
         }).dimensions(left + 12, 260, Math.min(240, contentWidth - 24), buttonHeight).build());
+        refreshControls();
     }
 
     private static Text legacyLabel() {
         return Text.literal("Legacy player poses: " + (BridgeAnimations.isEnabled() ? "ON" : "OFF"));
     }
+    private Text threeDLabel() {
+        if (OriginalRigRuntime.enabled()) return Text.literal("3D overlay: ON (disable)");
+        BedrockPackCatalog pack = previous instanceof BedrockStudioScreen studio
+            ? studio.currentPack() : BedrockStudioScreen.latestImportedPack();
+        if (pack == null) return Text.literal("3D overlay: LOAD PACK");
+        BedrockPackCatalog.Geometry geometry = previous instanceof BedrockStudioScreen studio
+            ? studio.currentGeometry() : BedrockCubeModel.choosePlayerGeometry(pack);
+        if (geometry == null || !BedrockModelSafety.assess(pack, geometry).worldSafe())
+            return Text.literal("3D overlay: BLOCKED");
+        return Text.literal("3D overlay: OFF (enable)");
+    }
+    private Text controllerLabel() {
+        if (OriginalRigRuntime.controllersEnabled()) return Text.literal("Controllers: ON");
+        if (!OriginalRigRuntime.enabled()) return Text.literal("Controllers: NEED 3D");
+        if (OriginalRigRuntime.controllerCount() == 0) return Text.literal("Controllers: NO DATA");
+        return Text.literal("Controllers: OFF (enable)");
+    }
+    private void refreshControls() {
+        if (original3dButton != null) original3dButton.setMessage(threeDLabel());
+        if (controllersButton != null) controllersButton.setMessage(controllerLabel());
+    }
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        refreshControls();
         ctx.fill(0, 0, width, height, BG);
         int left = Math.max(12, (width - Math.min(width - 24, 880)) / 2);
         int right = width - left;
@@ -98,10 +146,10 @@ public final class BridgeDashboardScreen extends Screen {
         label(ctx, "SOURCE 3D OVERLAY", left + 12, 194, ACCENT);
         label(ctx, "Active: " + (OriginalRigRuntime.enabled() ? "YES" : "NO"), left + 267, 216,
             OriginalRigRuntime.enabled() ? WARNING : ACCENT);
-        label(ctx, "Original attachments may require visibility rules and textures.", left + 12, 233, MUTED);
+        label(ctx, "3D requires a standalone body mesh; face/accessory models are blocked.", left + 12, 233, MUTED);
 
         label(ctx, "BEDROCK CONTROLLERS (EXPERIMENTAL)", left + 12, 245, ACCENT);
-        label(ctx, "Partial MoLang and controller states only; requires a supported source rig.",
+        label(ctx, "Depends on an active 3D source rig with supported controller data.",
             left + 12, 286, MUTED);
 
         int y = 333;
@@ -122,7 +170,7 @@ public final class BridgeDashboardScreen extends Screen {
 
         label(ctx, "Known issue: older separate test JARs or resource packs can draw artifacts",
             left, Math.max(y + 96, height - 82), WARNING);
-        label(ctx, fit(message, w), left, height - 35, MUTED);
+        label(ctx, fit(message, w), left, height - 35, message.toLowerCase(Locale.ROOT).contains("blocked") || message.toLowerCase(Locale.ROOT).contains("hidden") ? WARNING : MUTED);
         super.render(ctx, mouseX, mouseY, delta);
     }
 
