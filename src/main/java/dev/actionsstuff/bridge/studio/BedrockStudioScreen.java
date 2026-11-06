@@ -64,6 +64,8 @@ public final class BedrockStudioScreen extends Screen {
             .dimensions(x + 180, 23, 67, h).build());
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Use for player"), b -> enablePlayer())
             .dimensions(x + 253, 23, 119, h).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("3D Original ON/OFF"), b -> toggle3d())
+            .dimensions(x + 377, 23, 154, h).build());
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Close"), b -> close())
             .dimensions(Math.max(x + 378, this.width - 82), 23, 69, h).build());
 
@@ -92,6 +94,10 @@ public final class BedrockStudioScreen extends Screen {
             .dimensions(x + 338, 75, 72, h).build());
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Bone +"), b -> boneIndex++)
             .dimensions(x + 415, 75, 72, h).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Controller Layers"), b -> {
+            boolean enabled = OriginalRigRuntime.toggleControllers();
+            status = "Source controller layers " + (enabled ? "ON (experimental)" : "OFF");
+        }).dimensions(x + 493, 75, 130, h).build());
 
         if (catalog == null && !loading) scan();
     }
@@ -192,6 +198,23 @@ public final class BedrockStudioScreen extends Screen {
             : "No usable numeric player clips found; expressions may require MoLang";
     }
 
+    private void toggle3d() {
+        if (OriginalRigRuntime.enabled()) {
+            OriginalRigRuntime.disable();
+            status = "Original 3D layer disabled; vanilla renderer preserved";
+            return;
+        }
+        if (catalog == null) {
+            status = "Import your private .mcpack first";
+            return;
+        }
+        BedrockPackCatalog.Geometry selected = selectedGeometry();
+        status = OriginalRigRuntime.enable(catalog, selected);
+        if (OriginalRigRuntime.enabled()) {
+            status += " | only source cube mesh; some UV faces/materials unsupported";
+        }
+    }
+
     private BedrockPackCatalog.AnimationOption clipOption() {
         return clipList.isEmpty() ? null : clipList.get(Math.floorMod(clipIndex, clipList.size()));
     }
@@ -290,8 +313,12 @@ public final class BedrockStudioScreen extends Screen {
         drawBones(ctx, geo, chosen, rightX + 9, top + 34,
                 Math.max(40, width - rightX - 27), Math.max(45, bottom - top - 70));
         line(ctx, "Not yet full 3D rendering / MoLang", rightX + 8, bottom - 22, WARNING);
-        line(ctx, useInGame ? "In-game preview: SOURCE CLIPS ACTIVE" : "In-game preview: OFF",
-            rightX + 8, bottom - 10, useInGame ? ACCENT : MUTED);
+        line(ctx, useInGame ? "Vanilla rig: SOURCE CLIPS ACTIVE" : "Vanilla rig: OFF",
+            rightX + 8, bottom - 32, useInGame ? ACCENT : MUTED);
+        line(ctx, OriginalRigRuntime.enabled() ? "Original 3D: ON (experimental)" : "Original 3D: OFF",
+            rightX + 8, bottom - 21, OriginalRigRuntime.enabled() ? ACCENT : MUTED);
+        line(ctx, "Controllers: " + (OriginalRigRuntime.controllersEnabled() ? "ON (partial)" : "OFF"),
+            rightX + 8, bottom - 10, OriginalRigRuntime.controllersEnabled() ? WARNING : MUTED);
         super.render(ctx, mouseX, mouseY, deltaTicks);
     }
 
