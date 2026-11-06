@@ -57,6 +57,7 @@ public final class BedrockStudioScreen extends Screen {
 
     /** Dashboard may be opened directly through Mod Menu, without re-reading assets. */
     public static BedrockPackCatalog latestImportedPack() { return latestImportedPack; }
+    public static void rememberImportedPack(BedrockPackCatalog catalog) { latestImportedPack = catalog; }
     public BedrockPackCatalog currentPack() { return catalog; }
     public BedrockPackCatalog.Geometry currentGeometry() { return selectedGeometry(); }
 
@@ -185,7 +186,7 @@ public final class BedrockStudioScreen extends Screen {
         paths = List.copyOf(found);
         fileIndex = ix;
         catalog = imported;
-        latestImportedPack = imported;
+        rememberImportedPack(imported);
         entityNames = catalog.entityNames();
         entityIndex = geometryIndex = clipIndex = boneIndex = 0;
         seconds = 0;
