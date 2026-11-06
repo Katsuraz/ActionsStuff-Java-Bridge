@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "actions_stuff_bridge",
+  "version": "${version}",
+  "name": "Actions & Stuff Java Bridge (experimental)",
+  "description": "Client-side prototype for playing authorized, locally imported Bedrock keyframes.",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.actionsstuff.bridge.ActionsStuffBridgeClient"]
+  },
+  "mixins": ["actions_stuff_bridge.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
