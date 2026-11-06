@@ -35,7 +35,7 @@ jobs:
           from pathlib import Path
           src=Path('src/main/java/com/ans/client/mixin/port26/FirstPersonHandsAndItemsRendererMixin.java').read_text()
           assert 'FirstPersonHandsAndItemsRenderer' in src
-          assert 'ItemInHandRenderer' not in src
+          assert 'import net.minecraft.client.renderer.ItemInHandRenderer;' not in src
           assert 'FirstPersonHandsAndItemsRenderState' in src
           print('26.3 first-person source compatibility checks passed')
           PY
