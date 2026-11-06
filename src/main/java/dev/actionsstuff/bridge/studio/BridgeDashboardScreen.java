@@ -51,6 +51,7 @@ public final class BridgeDashboardScreen extends Screen {
                 BridgeAnimations.disable();
                 message = "Legacy animation adapter disabled. This does not disable OTHER installed mods.";
             } else {
+                OriginalRigRuntime.disable();
                 BridgeAnimations.enable();
                 message = "Legacy six-part test pose adapter enabled for this session.";
             }
