@@ -32,16 +32,19 @@ public final class BedrockPackCatalog {
     public final Map<String, Animation> animations;
     public final Map<String, EntityInfo> entities;
     public final Map<String, Controller> controllers;
+    public final Map<String, RenderController> renderControllers;
     public final int decodedDocuments;
 
     private BedrockPackCatalog(String filename, Map<String, Geometry> geometry,
             Map<String, Animation> animations, Map<String, EntityInfo> entities,
-            Map<String, Controller> controllers, int decodedDocuments) {
+            Map<String, Controller> controllers, Map<String, RenderController> renderControllers,
+            int decodedDocuments) {
         this.filename = filename;
         this.geometry = Map.copyOf(geometry);
         this.animations = Map.copyOf(animations);
         this.entities = Map.copyOf(entities);
         this.controllers = Map.copyOf(controllers);
+        this.renderControllers = Map.copyOf(renderControllers);
         this.decodedDocuments = decodedDocuments;
     }
 
@@ -63,6 +66,7 @@ public final class BedrockPackCatalog {
         var clips = new LinkedHashMap<String, Animation>();
         var entityIndex = new LinkedHashMap<String, EntityInfo>();
         var controllers = new LinkedHashMap<String, Controller>();
+        var renderControllers = new LinkedHashMap<String, RenderController>();
         int[] docs = {0};
 
         try (ZipFile zip = new ZipFile(source.toFile(), StandardCharsets.UTF_8)) {
@@ -86,17 +90,17 @@ public final class BedrockPackCatalog {
                     try {
                         BrArchiveReader.read(raw, (member, data) -> {
                             if (member.endsWith(".json")) {
-                                index(category, data, geometries, clips, entityIndex, controllers, docs);
+                                index(category, data, geometries, clips, entityIndex, controllers, renderControllers, docs);
                             }
                         });
                     } catch (IllegalArgumentException ex) {
                         throw new IOException("Invalid " + name + ": " + ex.getMessage(), ex);
                     }
                 } else if (name.endsWith(".json")) {
-                    for (String category : List.of("animations", "animation_controllers", "models/entity", "entity")) {
+                    for (String category : List.of("animations", "animation_controllers", "render_controllers", "models/entity", "entity")) {
                         if (name.startsWith(category + "/")) {
                             index(category, readLimited(zip, entry, 24 * 1024 * 1024),
-                                geometries, clips, entityIndex, controllers, docs);
+                                geometries, clips, entityIndex, controllers, renderControllers, docs);
                             break;
                         }
                     }
@@ -107,11 +111,11 @@ public final class BedrockPackCatalog {
             throw new IOException("No supported Bedrock animation/geometry files found");
         }
         return new BedrockPackCatalog(source.getFileName().toString(),
-                geometries, clips, entityIndex, controllers, docs[0]);
+                geometries, clips, entityIndex, controllers, renderControllers, docs[0]);
     }
 
     private static boolean isRelevant(String category) {
-        return category.equals("animations") || category.equals("animation_controllers")
+        return category.equals("animations") || category.equals("render_controllers") || category.equals("animation_controllers")
                 || category.equals("models/entity") || category.equals("entity");
     }
 
@@ -131,7 +135,8 @@ public final class BedrockPackCatalog {
 
     private static void index(String category, byte[] bytes,
             Map<String, Geometry> geos, Map<String, Animation> clips,
-            Map<String, EntityInfo> entities, Map<String, Controller> controllers, int[] docs) {
+            Map<String, EntityInfo> entities, Map<String, Controller> controllers,
+            Map<String, RenderController> renderControllers, int[] docs) {
         if (bytes.length > 24 * 1024 * 1024 || ++docs[0] > 15_000) return;
         JsonObject root;
         try {
@@ -167,7 +172,17 @@ public final class BedrockPackCatalog {
                 String id = string(desc, "identifier", "");
                 if (!id.isEmpty()) {
                     entities.putIfAbsent(id, new EntityInfo(id, strings(object(desc, "geometry")),
-                            strings(object(desc, "animations"))));
+                            strings(object(desc, "animations")), renderBindings(array(desc, "render_controllers"))));
+                }
+            }
+            case "render_controllers" -> {
+                JsonObject map = object(root, "render_controllers");
+                if (map == null) return;
+                for (var e : map.entrySet()) {
+                    if (!e.getValue().isJsonObject() || renderControllers.size() >= 4_000) continue;
+                    JsonObject rule = e.getValue().getAsJsonObject();
+                    renderControllers.putIfAbsent(e.getKey(), new RenderController(e.getKey(),
+                        string(rule,"geometry",""), rule.deepCopy()));
                 }
             }
             case "animation_controllers" -> {
@@ -228,7 +243,10 @@ public final class BedrockPackCatalog {
         return result;
     }
 
-    public record EntityInfo(String id, Map<String, String> geometry, Map<String, String> animations) { }
+    public record EntityInfo(String id, Map<String, String> geometry,
+                             Map<String, String> animations, List<RenderBinding> renderBindings) { }
+    public record RenderBinding(String controllerId, String condition) { }
+    public record RenderController(String id, String geometryRef, JsonObject originalSource) { }
     public record Controller(String id, List<String> states, JsonObject originalSource) { }
     public record AnimationOption(String alias, Animation animation) { }
     public record Bone(String name, String parent, float x, float y, float z, int cubes) { }
@@ -341,6 +359,23 @@ public final class BedrockPackCatalog {
             }
             return keys.get(keys.size() - 1).post;
         }
+    }
+
+    private static List<RenderBinding> renderBindings(JsonArray raw) {
+        if (raw == null) return List.of();
+        List<RenderBinding> result = new ArrayList<>();
+        for (JsonElement element : raw) {
+            if (result.size() >= 256) break;
+            if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
+                result.add(new RenderBinding(element.getAsString(), ""));
+            } else if (element.isJsonObject()) {
+                for (var entry : element.getAsJsonObject().entrySet()) {
+                    if (!entry.getValue().isJsonPrimitive()) continue;
+                    result.add(new RenderBinding(entry.getKey(), entry.getValue().getAsString()));
+                }
+            }
+        }
+        return List.copyOf(result);
     }
 
     private static Map<String, String> strings(JsonObject raw) {
