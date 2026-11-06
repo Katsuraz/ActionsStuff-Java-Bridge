@@ -54,6 +54,9 @@ public final class BedrockCubeModel {
         BedrockPackCatalog.Geometry best = null;
         int bestScore = Integer.MIN_VALUE;
         for (var geo : candidates) {
+            // Never auto-select cosmetic overlays as whole body models:
+            // original Bedrock render controllers hide/change their geometry.
+            if (!BedrockModelSafety.assess(catalog, geo).worldSafe()) continue;
             if (geo.cubes() < 4 || geo.cubes() > MAX_CUBES || geo.bones().size() > MAX_BONES)
                 continue;
             JsonObject desc = object(geo.originalSource(), "description");
