@@ -17,8 +17,8 @@ class BridgeSimpleSetupContractTest {
         assertTrue(home.contains("2. Enable Player Motion"));
         assertTrue(home.contains("3. Explore Animations (optional)"));
         assertTrue(home.contains("SourcePlayerMotion.enable(pack)"));
-        assertTrue(home.contains("Full Actions & Stuff port: NOT READY"));
-        assertTrue(home.contains("NOT enabled in-game"));
+        assertTrue(home.contains("Full pack (textures / mobs / accessories): NOT READY"));
+        assertTrue(home.contains("Click Enable Player Motion to start animations."));
         assertFalse(home.contains("ENABLE FULL PACK"));
     }
 
