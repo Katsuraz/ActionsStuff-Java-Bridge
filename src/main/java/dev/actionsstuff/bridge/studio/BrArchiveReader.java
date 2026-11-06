@@ -13,7 +13,7 @@ public final class BrArchiveReader {
     private static final byte[] MAGIC = {(byte)0x7d,0x27,0x25,(byte)0xb1,(byte)0xa0,0x52,0x70,0x26};
     private static final int ENTRY_BYTES = 256;
     private static final int MAX_MEMBERS = 50_000;
-    private static final int MAX_FILE = 12 * 1024 * 1024;
+    private static final int MAX_FILE = 24 * 1024 * 1024;
     private BrArchiveReader() {}
 
     public static void read(byte[] content, BiConsumer<String, byte[]> each) {
