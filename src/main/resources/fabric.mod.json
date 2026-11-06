@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "id": "actions_stuff_bridge",
   "version": "${version}",
-  "name": "Actions & Stuff Java Bridge (experimental)",
-  "description": "Client-side prototype for playing authorized, locally imported Bedrock keyframes.",
+  "name": "Actions & Stuff Java Bridge (private alpha)",
+  "description": "Experimental Fabric 1.21.11 animation bridge. No Oreville assets bundled.",
   "environment": "client",
   "entrypoints": {
     "client": ["dev.actionsstuff.bridge.ActionsStuffBridgeClient"]
   },
   "mixins": ["actions_stuff_bridge.mixins.json"],
   "depends": {
-    "fabricloader": ">=0.15.0",
-    "minecraft": "1.20.1",
-    "java": ">=17",
+    "fabricloader": ">=0.18.1",
+    "minecraft": "1.21.11",
+    "java": ">=21",
     "fabric-api": "*"
   }
 }

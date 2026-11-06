@@ -1,31 +1,30 @@
 # Actions & Stuff Java Bridge — development status
 
-**Repository initialized:** 2026-11-06
+**Active development target: Minecraft Java Fabric 1.21.11.**
 
-## Current build target
-- Minecraft Java **Fabric 1.20.1**, Java 17.
-- The client code loads locally imported animation clip sets on resource reload.
-- A prototype renderer mixin maps supported rotation keyframes onto vanilla biped body parts.
-- This is not a complete faithful port and is NOT in-game verified.
-- No original, converted or third-party licensed Bedrock assets are stored in the repository.
+## Current alpha test
+- Java **21**, Fabric Loader **0.18.4**, Fabric API **0.141.1+1.21.11**.
+- Build uses current remapping Loom with Yarn 1.21.11 mappings.
+- A **synthetic** (not Oreville-owned) idle/walk animation is bundled to smoke-test real player animation hooks.
+- Client reload reads `assets/actions_stuff_bridge/animations/player.json` in the private user's own resource packs.
+- Third-person vanilla player model only; no Punchy! Moves dependency.
+- Animation clips currently support static and timestamped numeric rotation keyframes only.
 
-## Milestones
-1. Verify GitHub Actions compilation; fix Java/Yarn/Mixin build errors.
-2. Test client startup and diagnostic logging in a disposable Fabric 1.20.1 instance.
-3. Replace biped-only animation with a faithful geometry/bone controller runtime.
-4. Implement player and vanilla mob controller states, death animations, particles, sounds and equipment.
-5. Create separate Fabric 1.21.11 and 26.3 adapters and their respective workflows.
-6. Compare resulting animations to original authorized Bedrock references frame-by-frame.
+## What to verify
+1. GitHub Actions Gradle build succeeds.
+2. The mod JAR loads with Minecraft Fabric 1.21.11 and Fabric API installed.
+3. Third-person idle arm sway and walking arm/leg test motions are visible.
+4. No Mixin application errors occur in latest.log.
+5. After successful synthetic smoke test, test locally imported original-source 1.13 keyframes. Do not commit them here.
 
-## Known limitations
-- The Bedrock animations contain custom bones, MoLang expressions, render controllers and geometry;
-  currently unsupported and NOT silently approximated as complete behavior.
-- The 1.13 resource pack contains compressed brarchive containers. The inspection tool inventories
-  locally supplied archives; it does not itself decode or distribute licensed game content.
-- Current test code does not include player rigs, custom mob models or first-person functionality.
-- Build passing != game running != visual fidelity.
+## Not implemented
+Original geometry hierarchy and alternate bones, MoLang evaluation, custom mob models,
+multi-state Bedrock animation controllers, first-person rendering, animation blending and
+synchronization, particles, sounds, and item/armor accessory mapping.
 
-## Legal boundary
-The user reports permission to *test* a Java port. The repository is **public** as currently
-configured by the owner. It contains only independent source code and no original copyrighted assets.
-Permission to redistribute the original assets has not been established.
+## Asset security
+This public repository contains only independently authored code and synthetic smoke-test
+motions. No Oreville Studios asset is included. Permission to test is not permission to
+redistribute the asset source files, converted animations or the complete port.
+
+**Passing CI is not proof of in-game fidelity.**
