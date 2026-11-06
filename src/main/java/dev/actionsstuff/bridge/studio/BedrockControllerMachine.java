@@ -35,6 +35,7 @@ public final class BedrockControllerMachine {
         if (states == null) return List.of();
         JsonObject currentJson=object(states,current);
         if(currentJson==null)return List.of();
+        String initial = current;
         JsonArray transitions=array(currentJson,"transitions");
         if(transitions!=null) {
             for(int i=0;i<Math.min(64,transitions.size());i++){
@@ -50,7 +51,7 @@ public final class BedrockControllerMachine {
                     }
                 }
                 if(currentJson==null)break;
-                if(!current.equals(readInitialSourceState(transitions,i))) {
+                if(!current.equals(initial)) {
                     // Only one transition per update tick, as in Bedrock.
                     break;
                 }
@@ -72,12 +73,6 @@ public final class BedrockControllerMachine {
             }
         }
         return List.copyOf(result);
-    }
-
-    private String readInitialSourceState(JsonArray transitions,int unused) {
-        // Returns a sentinel to end the transition scan once a new state wins;
-        // this branch intentionally avoids cascading multiple transitions.
-        return "__source_controller_transition_stop__";
     }
 
     private static Double tryEvaluate(JsonElement element,Map<String,Double> variables){
