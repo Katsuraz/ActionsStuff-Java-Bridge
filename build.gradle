@@ -13,6 +13,8 @@ dependencies {
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.11.4"
 }
 processResources {
     inputs.property 'version', project.version
@@ -22,4 +24,5 @@ tasks.withType(JavaCompile).configureEach {
     it.options.release = 21
     it.options.encoding = 'UTF-8'
 }
+tasks.withType(Test).configureEach { useJUnitPlatform() }
 java { withSourcesJar() }

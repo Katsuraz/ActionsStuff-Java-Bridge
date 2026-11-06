@@ -1,7 +1,6 @@
 package dev.actionsstuff.bridge.mixin;
 
 import dev.actionsstuff.bridge.BridgeAnimations;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,6 +19,6 @@ public abstract class PlayerEntityModelMixin {
         at = @At("TAIL")
     )
     private void actionsStuff$applyPlayerAnimation(PlayerEntityRenderState state, CallbackInfo ci) {
-        BridgeAnimations.apply((BipedEntityModel<?>)(Object)this, state);
+        BridgeAnimations.apply((PlayerEntityModel)(Object)this, state);
     }
 }
