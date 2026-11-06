@@ -94,6 +94,10 @@ public final class BedrockStudioScreen extends Screen {
             .dimensions(x + 338, 75, 72, h).build());
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Bone +"), b -> boneIndex++)
             .dimensions(x + 415, 75, 72, h).build());
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Controller Layers"), b -> {
+            boolean enabled = OriginalRigRuntime.toggleControllers();
+            status = "Source controller layers " + (enabled ? "ON (experimental)" : "OFF");
+        }).dimensions(x + 493, 75, 130, h).build());
 
         if (catalog == null && !loading) scan();
     }
@@ -312,7 +316,9 @@ public final class BedrockStudioScreen extends Screen {
         line(ctx, useInGame ? "Vanilla rig: SOURCE CLIPS ACTIVE" : "Vanilla rig: OFF",
             rightX + 8, bottom - 32, useInGame ? ACCENT : MUTED);
         line(ctx, OriginalRigRuntime.enabled() ? "Original 3D: ON (experimental)" : "Original 3D: OFF",
-            rightX + 8, bottom - 10, OriginalRigRuntime.enabled() ? ACCENT : MUTED);
+            rightX + 8, bottom - 21, OriginalRigRuntime.enabled() ? ACCENT : MUTED);
+        line(ctx, "Controllers: " + (OriginalRigRuntime.controllersEnabled() ? "ON (partial)" : "OFF"),
+            rightX + 8, bottom - 10, OriginalRigRuntime.controllersEnabled() ? WARNING : MUTED);
         super.render(ctx, mouseX, mouseY, deltaTicks);
     }
 
