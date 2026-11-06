@@ -1,7 +1,7 @@
-name: Build Fabric 1.20.1 Bridge (experimental)
+name: Fabric 1.21.11 experimental bridge
 on:
   push:
-    branches: [main]
+    branches: [main, 'feat/**']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -14,20 +14,20 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
+          java-version: '21'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.0'
       - name: Validate source-pack inspection utilities
         run: python -m unittest discover -s tests -v
-      - name: Compile Fabric mod
-        run: gradle --no-daemon build
+      - name: Compile Fabric 1.21.11 mod
+        run: gradle --no-daemon build --stacktrace
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: actions-stuff-bridge-fabric-1.20.1-unverified
+          name: actions-stuff-bridge-fabric-1.21.11-alpha
           path: build/libs/*.jar
-          retention-days: 7
+          retention-days: 14
