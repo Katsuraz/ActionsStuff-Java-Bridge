@@ -39,3 +39,40 @@ The user's owned JAR and original 1.13 Bedrock assets must remain on their machi
 6. Only after a complete client smoke test should a 26.3-compatible build be considered a working port.
 
 See: [Fabric's Minecraft 26.3 release notes](https://fabricmc.net/2026/09/15/263.html) and [official Fabric 26.3 example-mod](https://github.com/FabricMC/fabric-example-mod/tree/26.3).
+
+
+## 2026-11-07: private Stage 8 world-render port (experimental)
+
+The user confirmed that Stage 7 now completes client startup, creates a world,
+logs in the local player, and loads GeckoLib content. The first render frame
+then crashed with:
+
+    java.lang.IllegalStateException:
+        Expected an AvatarRenderState for the local player
+    at net.minecraft.client.renderer.extract.LevelExtractor.extractPlayerState
+
+**Correct source-level fix:** The old Actions & Java
+\`com.ans.client.mob.player.PlayerRenderState\` extended \`HumanoidRenderState\`.
+Minecraft 26.3's \`LevelExtractor\` requires \`AvatarRenderState\` for the local
+player. The new source class extends \`AvatarRenderState\`, inheriting the vanilla
+\`skin\`, \`showCape\`, \`isSpectator\`, \`fallFlyingTimeInTicks\`, and parrot fields
+rather than declaring duplicates. It keeps \`cameraFade\` as an Actions & Java
+field. Source CI compiled this class against actual 26.3.
+
+The same log also showed 183 rejected converted GeckoLib geometry models:
+
+- 180 files contained missing parent, duplicated bone name, or self-parenting
+  hierarchy issues.
+- Three arrow models contained zero-size invisible cubes without UV data.
+
+The local Stage 8 private build replaces only \`PlayerRenderState.class\`, fixes
+those 183 models, and updates the private test version. Public, source-only
+reproduction of the geometry changes is in
+\`tools/repair_private_geometry_26_3.py\`. **No third-party assets are stored
+in GitHub.**
+
+**Crucially:** A successful Java 25 source compilation and ZIP/model-validation
+pass do **not** verify live 26.3 gameplay or full rendering correctness. First
+person animations, armor rendering, and RenderPearl changes remain under review.
+Do not describe Stage 8 as an official or stable release until client smoke
+tests and animation comparisons pass.
