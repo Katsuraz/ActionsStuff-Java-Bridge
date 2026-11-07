@@ -4,7 +4,8 @@
   "package": "com.ans.client.mixin.port26",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "FirstPersonHandsAndItemsRendererMixin"
+    "FirstPersonHandsAndItemsRendererMixin",
+    "LivingEntitySwingCompatMixin"
   ],
   "injectors": {
     "defaultRequire": 0
