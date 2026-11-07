@@ -39,6 +39,13 @@ jobs:
           assert 'FirstPersonHandsAndItemsRenderState' in src
           print('26.3 first-person source compatibility checks passed')
           PY
+      - name: Inventory 26.3 game API for proactive private ABI audit
+        run: python3 tools/dump_minecraft_api.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-26-3-api-symbols
+          path: ports/actions-java-26.3/build/reports/minecraft-26.3-api-index.json.gz
+          retention-days: 2
       - uses: actions/upload-artifact@v4
         with:
           name: ans26-firstperson-source-classes
