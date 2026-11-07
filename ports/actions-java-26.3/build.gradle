@@ -8,11 +8,18 @@ version = project.mod_version
 
 repositories {
     mavenCentral()
+    // GeckoLib's official Maven repository. The user-provided
+    // geckolib-fabric-26.3-5.5.7.jar was inspected for API compatibility.
+    maven {
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+    }
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    modImplementation "com.geckolib:geckolib-fabric-${project.minecraft_version}:${project.geckolib_version}"
 }
 
 java {
