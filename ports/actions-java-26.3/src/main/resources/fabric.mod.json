@@ -3,7 +3,7 @@
   "id": "ans26_firstperson_port",
   "version": "${version}",
   "name": "Actions & Java 26.3 first-person source port (development)",
-  "description": "Source-level Minecraft 26.3 adaptation of the first-person hand render interface. Not a complete port; intended for class merge into the owner's private Actions & Java build.",
+  "description": "Source-level 26.3 adaptations of first-person rendering and GeckoLib animation-point API. Only a compatibility module, not a complete port of the original ans mod.",
   "environment": "client",
   "mixins": [
     {
@@ -14,6 +14,8 @@
   "depends": {
     "minecraft": "26.3",
     "java": ">=25",
-    "fabricloader": ">=0.19.5"
+    "fabricloader": ">=0.19.5",
+    "fabric-api": ">=0.160.5+26.3",
+    "geckolib": ">=5.5.7"
   }
 }
