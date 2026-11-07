@@ -1,0 +1,53 @@
+name: Actions & Java 26.3 first-person source port
+on:
+  push:
+    branches:
+      - feat/actions-java-26-3-source-port
+    paths:
+      - 'ports/actions-java-26.3/**'
+      - '.github/workflows/actions-java-26-3-port.yml'
+  pull_request:
+    paths:
+      - 'ports/actions-java-26.3/**'
+      - '.github/workflows/actions-java-26-3-port.yml'
+  workflow_dispatch:
+
+jobs:
+  compile-26-3:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ports/actions-java-26.3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.8.1'
+      - name: Compile against actual Minecraft 26.3 API
+        run: gradle --no-daemon build --stacktrace
+      - name: Check the source uses Minecraft 26.3 render states
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('src/main/java/com/ans/client/mixin/port26/FirstPersonHandsAndItemsRendererMixin.java').read_text()
+          assert 'FirstPersonHandsAndItemsRenderer' in src
+          assert 'import net.minecraft.client.renderer.ItemInHandRenderer;' not in src
+          assert 'FirstPersonHandsAndItemsRenderState' in src
+          print('26.3 first-person source compatibility checks passed')
+          PY
+      - name: Inventory 26.3 game API for proactive private ABI audit
+        run: python3 tools/dump_minecraft_api.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-26-3-api-symbols
+          path: ports/actions-java-26.3/build/reports/minecraft-26.3-api-index.json.gz
+          retention-days: 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ans26-firstperson-source-classes
+          path: ports/actions-java-26.3/build/libs/*.jar
+          retention-days: 7
