@@ -131,7 +131,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth 1 https://github.com/CreeperHost/modlens-mcp.git "$MODLENS_DIR"
+          mkdir -p "$MODLENS_DIR"
+          git -C "$MODLENS_DIR" init -q
+          git -C "$MODLENS_DIR" remote add origin https://github.com/CreeperHost/modlens-mcp.git
+          git -C "$MODLENS_DIR" fetch --depth 1 origin ba2020c226b51858d157bc943ed13f1c6b578514
+          git -C "$MODLENS_DIR" checkout --detach -q FETCH_HEAD
           npm --prefix "$MODLENS_DIR" ci
           npm --prefix "$MODLENS_DIR" run build
           cp "$MODLENS_DIR/prisma/backends/template.db" "$RUNNER_TEMP/modlens.db"
