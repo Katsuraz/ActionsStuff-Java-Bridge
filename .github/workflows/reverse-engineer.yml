@@ -1,0 +1,166 @@
+name: Minecraft Reverse Engineering
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reverse-engineer.yml'
+      - 'tools/reverse_engineer.py'
+      - 'tests/test_reverse_engineer.py'
+      - 'docs/REVERSE_ENGINEERING.md'
+  pull_request:
+    paths:
+      - '.github/workflows/reverse-engineer.yml'
+      - 'tools/reverse_engineer.py'
+      - 'tests/test_reverse_engineer.py'
+      - 'docs/REVERSE_ENGINEERING.md'
+  workflow_dispatch:
+    inputs:
+      jar_url:
+        description: 'Optional public HTTPS URL directly linking to a mod JAR (blank = smoke-test fixture)'
+        required: false
+        type: string
+      gradle_mode:
+        description: 'Validate Loom, build the mod, or skip Gradle'
+        required: true
+        type: choice
+        default: validate
+        options:
+          - validate
+          - build
+          - skip
+  workflow_call:
+    inputs:
+      jar_url:
+        description: 'Optional direct public HTTPS mod JAR URL'
+        required: false
+        type: string
+        default: ''
+      gradle_mode:
+        description: 'validate, build or skip'
+        required: false
+        type: string
+        default: validate
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze JAR + validate Fabric Loom
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      JAR_URL: ${{ inputs.jar_url || '' }}
+      GRADLE_MODE: ${{ inputs.gradle_mode || 'validate' }}
+      MODLENS_DIR: ${{ runner.temp }}/modlens
+      OUTPUT_DIR: ${{ runner.temp }}/minecraft-reverse-engineering
+    steps:
+      - name: Check out mod project
+        uses: actions/checkout@v4
+
+      - name: Install Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Test offline JAR inspection
+        run: python -m unittest discover -s tests -p test_reverse_engineer.py -v
+
+      - name: Prepare mod JAR or generate smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR" "$RUNNER_TEMP/rea-input"
+          jar="$RUNNER_TEMP/rea-input/target.jar"
+          if [[ -n "$JAR_URL" ]]; then
+            python tools/reverse_engineer.py download --url "$JAR_URL" --dest "$jar"
+          else
+            python tools/reverse_engineer.py fixture --dest "$jar"
+          fi
+          echo "JAR_PATH=$jar" >> "$GITHUB_ENV"
+
+      - name: Inspect JAR entries and Fabric/Mixin metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/reverse_engineer.py inspect --jar "$JAR_PATH" --out "$OUTPUT_DIR/inventory"
+
+      - name: Download verified Vineflower 1.12.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --silent --show-error \
+            'https://github.com/Vineflower/vineflower/releases/download/1.12.0/vineflower-1.12.0.jar' \
+            --output "$RUNNER_TEMP/vineflower.jar"
+          echo '1dfcfe974395734fa467ce620661c7623d05ba83670de0529b1fbd63ff548b9d  ' "$RUNNER_TEMP/vineflower.jar" | sed 's/  /  /' > "$RUNNER_TEMP/vineflower.sha256"
+          sha256sum --check "$RUNNER_TEMP/vineflower.sha256"
+
+      - name: Decompile with Vineflower
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR/decompiled"
+          java -Xmx2g -jar "$RUNNER_TEMP/vineflower.jar" "$JAR_PATH" "$OUTPUT_DIR/decompiled" \
+            > "$OUTPUT_DIR/vineflower.log" 2>&1
+          find "$OUTPUT_DIR/decompiled" -type f | sort | head -n 30
+
+      - name: Build ModLens CLI and index the JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/CreeperHost/modlens-mcp.git "$MODLENS_DIR"
+          npm --prefix "$MODLENS_DIR" ci
+          npm --prefix "$MODLENS_DIR" run build
+          node "$MODLENS_DIR/dist/cli.js" stats > "$OUTPUT_DIR/modlens-stats.txt" 2>&1
+          node "$MODLENS_DIR/dist/cli.js" ingest "$JAR_PATH" > "$OUTPUT_DIR/modlens-ingest.txt" 2>&1
+          node "$MODLENS_DIR/dist/cli.js" list > "$OUTPUT_DIR/modlens-list.txt" 2>&1
+          node "$MODLENS_DIR/dist/cli.js" version-conflicts > "$OUTPUT_DIR/modlens-conflicts.txt" 2>&1
+          cat "$OUTPUT_DIR/modlens-ingest.txt"
+
+      - name: Validate Fabric Loom / optionally build the project
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GRADLE_MODE" == "skip" ]]; then
+            echo "Gradle deliberately skipped" | tee "$OUTPUT_DIR/fabric-loom.log"
+          elif [[ "$GRADLE_MODE" == "validate" || "$GRADLE_MODE" == "build" ]]; then
+            if [[ -f "./gradlew" ]]; then
+              chmod +x ./gradlew
+              gradle_cmd=(./gradlew)
+            else
+              gradle_cmd=(gradle)
+            fi
+            if [[ "$GRADLE_MODE" == "build" ]]; then
+              "${gradle_cmd[@]}" --no-daemon build 2>&1 | tee "$OUTPUT_DIR/fabric-loom.log"
+            else
+              "${gradle_cmd[@]}" --no-daemon help 2>&1 | tee "$OUTPUT_DIR/fabric-loom.log"
+            fi
+          else
+            echo "Unknown gradle_mode: $GRADLE_MODE" >&2
+            exit 2
+          fi
+
+      - name: Upload analysis output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-reverse-engineering-report
+          path: ${{ runner.temp }}/minecraft-reverse-engineering/
+          if-no-files-found: warn
+          retention-days: 7
