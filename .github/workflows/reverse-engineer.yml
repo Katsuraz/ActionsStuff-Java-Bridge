@@ -62,6 +62,8 @@ jobs:
     steps:
       - name: Check out mod project
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Check out reusable analysis tools
         uses: actions/checkout@v4
