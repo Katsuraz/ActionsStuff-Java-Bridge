@@ -83,16 +83,16 @@ def inspect(jar: Path, output_dir: Path) -> dict:
         mods = {}
     lines = [
         "# Minecraft JAR reverse-engineering report", "",
-        f"- Input: \`{jar.name}\`",
-        f"- SHA-256: \`{sha256}\`",
+        f"- Input: `{jar.name}`",
+        f"- SHA-256: `{sha256}`",
         f"- File size: {jar.stat().st_size:,} bytes",
         f"- Entries: {len(names):,}; classes: {len(classes):,}",
-        f"- Fabric mod ID: \`{mods.get('id', 'not declared')}\`",
-        f"- Fabric mod version: \`{mods.get('version', 'not declared')}\`",
+        f"- Fabric mod ID: `{mods.get('id', 'not declared')}`",
+        f"- Fabric mod version: `{mods.get('version', 'not declared')}`",
         f"- Loader manifests: {', '.join(metadata) or 'none found'}",
         f"- Mixin config JSON files: {len(mixes)}",
         "", "## Mixin-related JSON files", "",
-    ] + [f"- \`{name}\`" for name in mixes]
+    ] + [f"- `{name}`" for name in mixes]
     lines += ["", "## Limitations", "", 
               "Static JAR and bytecode inspection does not prove that a mod works in Minecraft.",
               "Run integration tests and in-game tests separately before claiming compatibility.", ""]
