@@ -52,8 +52,8 @@ jobs:
     env:
       JAR_URL: ${{ inputs.jar_url || '' }}
       GRADLE_MODE: ${{ inputs.gradle_mode || 'validate' }}
-      MODLENS_DIR: ${{ runner.temp }}/modlens
-      OUTPUT_DIR: ${{ runner.temp }}/minecraft-reverse-engineering
+      MODLENS_DIR: /tmp/modlens
+      OUTPUT_DIR: /tmp/minecraft-reverse-engineering
     steps:
       - name: Check out mod project
         uses: actions/checkout@v4
