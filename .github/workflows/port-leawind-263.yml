@@ -53,3 +53,59 @@ jobs:
             perspective-api/versions/26.3-fabric/build/libs/*.jar
           if-no-files-found: warn
           retention-days: 7
+
+  third-person-263:
+    name: Port and build Third Person 3.0.3-beta for Fabric 26.3
+    needs: perspective-api-263
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out port tools
+        uses: actions/checkout@v4
+      - name: Download built 26.3 Perspective API
+        uses: actions/download-artifact@v4
+        with:
+          name: perspective-api-26.3-port-attempt
+          path: api-output
+      - name: Select proper Perspective API mod JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          find api-output -name '*.jar' -print
+          api_jar=$(find api-output -type f -name '*.jar' ! -name '*sources*' ! -name '*dev*' | head -n 1)
+          if [[ -z "$api_jar" ]]; then
+            echo 'No distributable Perspective API 26.3 JAR found' >&2
+            exit 1
+          fi
+          echo "API_JAR=$(realpath "$api_jar")" >> "$GITHUB_ENV"
+      - name: Install JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Prepare Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Fetch and patch original Third Person source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none https://github.com/Leawind/Third-Person.git third-person
+          git -C third-person checkout --detach 7c9ba2a54d41acd3e32eec773b928b1fe76e5ec4
+          python tools/port_leawind_263.py third-person "$API_JAR"
+      - name: Build real 26.3 source, do not relabel old binary
+        shell: bash
+        run: |
+          set -o pipefail
+          cd third-person
+          chmod +x gradlew
+          ./gradlew :26.3-fabric:build --no-daemon --stacktrace 2>&1 | tee ../third-person-build.log
+      - name: Upload compiled files and diagnostic output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: third-person-26.3-port-attempt
+          path: |
+            third-person-build.log
+            third-person/versions/26.3-fabric/build/libs/*.jar
+          if-no-files-found: warn
+          retention-days: 7
