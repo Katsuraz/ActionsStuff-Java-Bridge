@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import re
+import subprocess
 from urllib.parse import urlsplit
 
 from reverse_engineer import ALLOWED_HOSTS
@@ -11,8 +12,10 @@ from reverse_engineer import ALLOWED_HOSTS
 REQUEST_PATH = ".github/rea-request.json"
 VALID_MODES = {"validate", "build", "skip"}
 
-def request_was_changed(event: dict) -> bool:
-    """Do not reuse an earlier request for unrelated pushes."""
+def request_was_changed(event: dict, changed_files: set[str] | None = None) -> bool:
+    """Use the checkout diff; some GitHub push payloads omit commit file lists."""
+    if changed_files is not None:
+        return REQUEST_PATH in changed_files
     return any(
         REQUEST_PATH in commit.get(change, [])
         for commit in event.get("commits", [])
@@ -41,8 +44,11 @@ def validate_request(data: dict) -> dict:
 
 def main() -> None:
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
-    if not request_was_changed(event):
-        print("No request file change in this push; using standard workflow inputs.")
+    changed_files = set(subprocess.check_output(
+        ["git", "diff", "--name-only", "HEAD^", "HEAD"], text=True
+    ).splitlines())
+    if not request_was_changed(event, changed_files):
+        print("No request file change in this commit; using standard workflow inputs.")
         return
     request = validate_request(json.loads(Path(REQUEST_PATH).read_text(encoding="utf-8")))
     with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as output:
