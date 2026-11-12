@@ -55,7 +55,7 @@ will run its Gradle scripts if validation/build mode is enabled.
 - ModLens is a **CLI invoked in GitHub Actions**, not a new MCP connection
   inside ChatGPT.
 - Node.js 24, JDK 21, Vineflower 1.12.0, Python 3.12, and Gradle 8.7
-  are supplied by the runner. ModLens is cloned and built on each run.
+  are supplied by the runner. ModLens is fetched from pinned commit\n  `ba2020c226b51858d157bc943ed13f1c6b578514` and built on each run.\n  The upstream dependency audit reported known vulnerabilities during CI;\n  review upstream fixes before processing untrusted archives.
 - Default runs generate a small self-contained test JAR, so no outside mod
   JAR or secret is required to check the pipeline.
 
@@ -63,6 +63,6 @@ will run its Gradle scripts if validation/build mode is enabled.
 
 If the Actions workflow doesn't appear on the default branch, merge the
 reviewed PR first. If the run fails, inspect the failed step and its logs;
-the artifact is uploaded with \`if: always()\` when possible.
+the artifact is uploaded with `if: always()` when possible.
 For private JARs, avoid publicly hosted downloads and copy this workflow
 into a private repository with an appropriate private artifact mechanism.
