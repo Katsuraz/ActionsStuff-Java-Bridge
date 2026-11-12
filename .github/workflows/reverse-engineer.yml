@@ -3,15 +3,20 @@ name: Minecraft Reverse Engineering
 on:
   push:
     paths:
+      - '.github/rea-request.json'
       - '.github/workflows/reverse-engineer.yml'
       - 'tools/reverse_engineer.py'
+      - 'tools/analysis_request.py'
       - 'tests/test_reverse_engineer.py'
+      - 'tests/test_analysis_request.py'
       - 'docs/REVERSE_ENGINEERING.md'
   pull_request:
     paths:
       - '.github/workflows/reverse-engineer.yml'
       - 'tools/reverse_engineer.py'
+      - 'tools/analysis_request.py'
       - 'tests/test_reverse_engineer.py'
+      - 'tests/test_analysis_request.py'
       - 'docs/REVERSE_ENGINEERING.md'
   workflow_dispatch:
     inputs:
@@ -82,13 +87,17 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Apply chat-triggered request (main branch push only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Katsuraz/ActionsStuff-Java-Bridge'
+        run: python rea-toolkit/tools/analysis_request.py
+
       - name: Install Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
       - name: Test offline JAR inspection
-        run: python -m unittest discover -s rea-toolkit/tests -p test_reverse_engineer.py -v
+        run: python -m unittest discover -s rea-toolkit/tests -p 'test_*.py' -v
 
       - name: Prepare mod JAR or generate smoke test
         shell: bash
