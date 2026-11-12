@@ -27,6 +27,15 @@ def main(project: Path, local_api: Path) -> None:
     original_dependency = 'modstitchModImplementation("maven.modrinth:LIqveQm1:$perspectiveApiVersion+${loader}-$mcVersion")'
     replacement_dependency = 'modstitchModImplementation(files(rootProject.file("../local-dependencies/perspective_api_26_3.jar")))'
     replace_exact(project/"build.gradle.kts", original_dependency, replacement_dependency)
+    # Perspective API 26.3 splits selector order, duplicate-ID precedence,
+    # and dynamically resolved vanilla camera base type.
+    behavior = project/"src/main/java/io/github/leawind/thirdperson/internal/logic/base/ThirdPersonPerspective.java"
+    replace_exact(behavior,
+                  '    priority = 10,\\n    baseType = PerspectiveBehavior.BaseType.THIRD_PERSON_BACK,\\n    traits = {"third_person", "controllable"})'.replace('\\n','\\n'),
+                  '    order = 10,\\n    precedence = 10,\\n    traits = {"switchable", "third_person", "controllable"})'.replace('\\n','\\n'))
+    replace_exact(behavior,
+                  "  @Override\\n  public void onActivate()".replace('\\n','\\n'),
+                  "  @Override\\n  public PerspectiveBehavior.BaseType getBaseType() {\\n    return PerspectiveBehavior.BaseType.THIRD_PERSON_BACK;\\n  }\\n\\n  @Override\\n  public void onActivate()".replace('\\n','\\n'))
     verdir = project/"versions/26.3-fabric"
     verdir.mkdir(parents=True, exist_ok=True)
     (verdir/"gradle.properties").write_text(
