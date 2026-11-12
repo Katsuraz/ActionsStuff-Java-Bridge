@@ -126,6 +126,8 @@ jobs:
           git clone --depth 1 https://github.com/CreeperHost/modlens-mcp.git "$MODLENS_DIR"
           npm --prefix "$MODLENS_DIR" ci
           npm --prefix "$MODLENS_DIR" run build
+          cp "$MODLENS_DIR/prisma/backends/template.db" "$RUNNER_TEMP/modlens.db"
+          export DATABASE_URL="file:$RUNNER_TEMP/modlens.db"
           node "$MODLENS_DIR/dist/cli.js" stats > "$OUTPUT_DIR/modlens-stats.txt" 2>&1
           node "$MODLENS_DIR/dist/cli.js" ingest "$JAR_PATH" > "$OUTPUT_DIR/modlens-ingest.txt" 2>&1
           node "$MODLENS_DIR/dist/cli.js" list > "$OUTPUT_DIR/modlens-list.txt" 2>&1
