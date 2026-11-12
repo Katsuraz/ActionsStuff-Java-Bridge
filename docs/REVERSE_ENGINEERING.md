@@ -7,6 +7,32 @@ This workflow performs **static** analysis of a Java/Fabric mod JAR. It uses
 [Vineflower](https://github.com/Vineflower/vineflower) 1.12.0, and
 the repository's existing [Fabric Loom](https://github.com/FabricMC/fabric-loom) Gradle build.
 
+## Trigger directly from ChatGPT (no manual GitHub Actions button)
+
+When you give ChatGPT a **public direct JAR URL** and ask for analysis, the
+connected GitHub integration can update [`.github/rea-request.json`](../.github/rea-request.json)
+on the repository's `main` branch. A push modifying that file starts this
+workflow automatically. ChatGPT can then retrieve the resulting GitHub Actions
+logs and analysis artifacts through the connected GitHub integration.
+
+Request format (change `request_id` each time, even when analyzing the same JAR):
+
+~~~json
+{
+  "request_id": "example-001",
+  "jar_url": "https://github.com/OWNER/REPO/releases/download/TAG/mod.jar",
+  "gradle_mode": "validate"
+}
+~~~
+
+Use `"jar_url": ""` for a self-generated smoke-test fixture. Valid Gradle modes
+are `validate`, `build`, and `skip`. The request is accepted **only** for
+the exact request-file change in a push to the main branch of this repository;
+unrelated pushes will not automatically replay an old request. URL downloads
+still have the host and size restrictions in the inspection tool. This is an
+automated GitHub Actions workflow, **not a locally installed MCP plugin**.
+Because this repository is public, don't submit private JAR URLs or secrets.
+
 ## How to run
 
 1. Open the repository **Actions** tab.
@@ -55,7 +81,10 @@ will run its Gradle scripts if validation/build mode is enabled.
 - ModLens is a **CLI invoked in GitHub Actions**, not a new MCP connection
   inside ChatGPT.
 - Node.js 24, JDK 21, Vineflower 1.12.0, Python 3.12, and Gradle 8.7
-  are supplied by the runner. ModLens is fetched from pinned commit\n  `ba2020c226b51858d157bc943ed13f1c6b578514` and built on each run.\n  The upstream dependency audit reported known vulnerabilities during CI;\n  review upstream fixes before processing untrusted archives.
+  are supplied by the runner. ModLens is fetched from pinned commit
+  `ba2020c226b51858d157bc943ed13f1c6b578514` and built on each run.
+  The upstream dependency audit reported known vulnerabilities during CI;
+  review upstream fixes before processing untrusted archives.
 - Default runs generate a small self-contained test JAR, so no outside mod
   JAR or secret is required to check the pipeline.
 
