@@ -36,6 +36,13 @@ def main(project: Path, local_api: Path) -> None:
     replace_exact(behavior,
                   "  @Override\n  public void onActivate()".replace('\n','\n'),
                   "  @Override\n  public PerspectiveBehavior.BaseType getBaseType() {\n    return PerspectiveBehavior.BaseType.THIRD_PERSON_BACK;\n  }\n\n  @Override\n  public void onActivate()".replace('\n','\n'))
+    # Minecraft 26.3 expands multi-entity ray hits with a second boolean flag:
+    # includeFromEntity, projectSurfaceHitLocation. Preserve the existing
+    # includeFromEntity=true and request exact projected surface hits.
+    spatial = project/"src/main/java/io/github/leawind/thirdperson/internal/bridge/MinecraftSpatialQuerying.java"
+    replace_exact(spatial,
+                  "            ClipContext.Block.OUTLINE,\n            true))",
+                  "            ClipContext.Block.OUTLINE,\n            true,\n            true))")
     verdir = project/"versions/26.3-fabric"
     verdir.mkdir(parents=True, exist_ok=True)
     (verdir/"gradle.properties").write_text(
