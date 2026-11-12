@@ -36,6 +36,8 @@ class ChatRequestTests(unittest.TestCase):
         self.assertFalse(task.request_was_changed(event))
         event = {"commits": [{"modified": [".github/rea-request.json"]}]}
         self.assertTrue(task.request_was_changed(event))
+        self.assertFalse(task.request_was_changed(event, {"README.md"}))
+        self.assertTrue(task.request_was_changed({"commits": []}, {task.REQUEST_PATH}))
 
     def test_rejects_bad_modes_and_ids(self):
         for data in (
